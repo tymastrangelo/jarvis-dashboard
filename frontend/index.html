@@ -43,9 +43,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .panel:hover{border-color:rgba(56,189,248,0.55);box-shadow:0 0 0 1px rgba(56,189,248,0.15),0 8px 24px rgba(0,0,0,0.4)}
 .panel.dragging{opacity:0.4;cursor:grabbing}
 .panel.drag-over{border-color:#38bdf8;box-shadow:0 0 0 2px rgba(56,189,248,0.4)}
-.panel-expand-btn{position:absolute;top:8px;right:10px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:#0ea5e9;opacity:0.45;cursor:pointer;z-index:5;font-size:13px;transition:opacity .15s ease}
-.panel-expand-btn:hover{opacity:1}
+.panel-expand-btn{position:absolute;top:8px;right:10px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:#38bdf8;opacity:0;cursor:pointer;z-index:5;transition:opacity .15s ease;pointer-events:none}
+.panel:hover .panel-expand-btn{opacity:.55}
 .panel-drag-handle{position:absolute;top:8px;left:10px;color:#0ea5e9;opacity:0.25;font-size:11px;letter-spacing:2px;cursor:grab;user-select:none}
+
+/* RESIZE GRIP (bottom-right corner; drag horizontally to change width) */
+.resize-handle{position:absolute;bottom:0;right:0;width:24px;height:24px;cursor:ew-resize;z-index:6;touch-action:none}
+.panel:hover::after{border-color:#38bdf8}
+.panel.resizing{box-shadow:0 0 0 1px #38bdf8;user-select:none;z-index:8}
+.panel.resizing .fill,.panel.resizing .disk-fill,.panel.resizing .track .fill{transition:none}
 
 /* MODAL */
 .modal-backdrop{position:fixed;inset:0;background:rgba(2,8,16,0.75);backdrop-filter:blur(3px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease}
@@ -57,9 +63,35 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .modal-close{position:absolute;top:18px;right:20px;color:#38bdf8;font-size:18px;cursor:pointer;opacity:0.6;width:28px;height:28px;display:flex;align-items:center;justify-content:center;transition:opacity .15s ease}
 .modal-close:hover{opacity:1}
 .modal-title{font-family:'Share Tech Mono',monospace;font-size:14px;color:#38bdf8;letter-spacing:4px;text-transform:uppercase;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(56,189,248,0.2)}
-.modal-body{font-size:13px}
+.modal-body{font-size:14px}
 .modal-body .top-list{margin-top:8px}
-.modal-body .top-item{font-size:12px;padding:4px 0}
+.modal-body .top-item{font-size:13px;padding:5px 0}
+/* expanded HUD: scale the content up so it reads like a focused JARVIS screen */
+.modal-body .panel-label{font-size:11px;margin-bottom:16px}
+.modal-body .gauge-row{gap:15px}
+.modal-body .g-name{font-size:13px}
+.modal-body .g-val{font-size:15px}
+.modal-body .track{height:5px}
+.modal-body .sysinfo-row{font-size:13px;padding:7px 0}
+.modal-body .si-val{font-size:12px}
+.modal-body .service-grid{gap:10px}
+.modal-body .svc{padding:11px 13px}
+.modal-body .svc-name{font-size:13px}
+.modal-body .ag-grid{gap:9px}
+.modal-body .ag-val{font-size:27px}
+.modal-body .ag-label{font-size:10px}
+.modal-body .big-num{font-size:54px!important}
+.modal-body .temp-big{font-size:72px}
+.modal-body .uptime-num{font-size:32px}
+.modal-body .net-val{font-size:22px}
+.modal-body .docker-table td{font-size:12px;padding:7px 8px}
+.modal-body .docker-table th{font-size:10px}
+.modal-body .ts-name{font-size:14px}
+/* animated top accent — the "powering up" scan */
+.modal-box .modal-scan{position:absolute;top:0;left:0;height:2px;background:linear-gradient(90deg,transparent,#38bdf8,transparent);width:40%;animation:modalScan 2.6s ease-in-out infinite}
+@keyframes modalScan{0%{left:-40%}100%{left:100%}}
+.modal-live{display:inline-flex;align-items:center;gap:6px;font-size:9px;color:#22c55e;letter-spacing:2px;margin-left:10px;vertical-align:middle}
+.modal-live::before{content:'';width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 8px #22c55e;animation:blink 2s infinite}
 
 /* PANEL FOCUS HALO when expanded source */
 .panel.expanding{box-shadow:0 0 0 2px #38bdf8;z-index:10}
@@ -230,8 +262,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   /* 12-col grid -> 2-col. dense flow keeps it gapless whatever
      order panels end up in after drag-reordering */
   .grid{grid-template-columns:repeat(2,1fr);gap:8px;grid-auto-flow:dense}
-  .col1{grid-column:span 1}                       /* compact stat cards: two-up */
-  .col2,.col3,.col4,.col5,.col6{grid-column:span 2}/* richer panels: full width */
+  /* !important so a saved desktop resize width can't break the mobile layout */
+  .col1{grid-column:span 1!important}                       /* compact stat cards: two-up */
+  .col2,.col3,.col4,.col5,.col6{grid-column:span 2!important}/* richer panels: full width */
+  .resize-handle{display:none}                              /* resize is a desktop affordance */
 
   .panel{padding:12px}
   /* bigger, easier expand target on touch */
@@ -251,7 +285,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 /* very small phones: single column */
 @media (max-width:360px){
   .grid{grid-template-columns:1fr;grid-auto-flow:row}
-  .col1,.col2,.col3,.col4,.col5,.col6{grid-column:span 1}
+  .col1,.col2,.col3,.col4,.col5,.col6{grid-column:span 1!important}
 }
 
 /* touch devices: no mouse, so drop the sticky hover glow and grab cursor */
@@ -270,7 +304,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="header-left">
     <div class="status-pill"><div class="pulse"></div><span id="conn-status">CONNECTING</span></div>
     <div class="logo">J.A.R.V.I.S</div>
-    <div class="logout-btn" id="logout-btn" title="Sign out" style="display:none"><i class="ti ti-power"></i></div>
+    <div class="logout-btn" id="logout-btn" title="Sign out" style="display:none"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v9"/><path d="M7.5 7.5a7 7 0 1 0 9 0"/></svg></div>
   </div>
   <div class="header-right">
     <div class="time" id="clock">--:--:--</div>
@@ -283,7 +317,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- CPU / LOAD -->
   <div class="panel col1" data-id="cpu">
-    <div class="panel-expand-btn" data-expand="cpu"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="cpu"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">CPU & Load</div>
     <div class="gauge-row">
       <div class="gauge-item">
@@ -310,7 +344,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- MEMORY -->
   <div class="panel col1" data-id="memory">
-    <div class="panel-expand-btn" data-expand="memory"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="memory"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Memory</div>
     <div class="gauge-row">
       <div class="gauge-item">
@@ -332,7 +366,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- TEMPERATURE -->
   <div class="panel col1" data-id="temperature">
-    <div class="panel-expand-btn" data-expand="temperature"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="temperature"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Temperature</div>
     <div class="temp-wrap">
       <div class="temp-big" id="temp-val">--</div>
@@ -349,7 +383,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- UPTIME -->
   <div class="panel col1" data-id="uptime">
-    <div class="panel-expand-btn" data-expand="uptime"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="uptime"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Uptime</div>
     <div class="uptime-grid">
       <div class="uptime-part"><div class="uptime-num" id="up-days">--</div><div class="uptime-label">days</div></div>
@@ -365,7 +399,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- SERVICES -->
   <div class="panel col2" data-id="services">
-    <div class="panel-expand-btn" data-expand="services"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="services"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Services</div>
     <div class="service-grid" id="services-grid">
       <div class="loading">scanning...</div>
@@ -374,7 +408,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- DOCKER CONTAINERS -->
   <div class="panel col2" data-id="docker">
-    <div class="panel-expand-btn" data-expand="docker"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="docker"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Docker Containers</div>
     <table class="docker-table">
       <thead><tr><th>Container</th><th>CPU</th><th>Memory</th><th>Net I/O</th></tr></thead>
@@ -384,7 +418,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- ADGUARD STATS -->
   <div class="panel col2" data-id="adguard">
-    <div class="panel-expand-btn" data-expand="adguard"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="adguard"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">AdGuard Home · DNS</div>
     <div class="ag-grid">
       <div class="ag-card"><div class="ag-val" id="ag-queries">--</div><div class="ag-label">Queries (24h)</div></div>
@@ -400,7 +434,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- DISK -->
   <div class="panel col1" data-id="disk">
-    <div class="panel-expand-btn" data-expand="disk"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="disk"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Disk</div>
     <div id="disk-section">
       <div class="disk-item">
@@ -418,14 +452,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- TAILSCALE -->
   <div class="panel col2" data-id="tailscale">
-    <div class="panel-expand-btn" data-expand="tailscale"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="tailscale"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Tailscale Network</div>
     <div id="ts-devices"><div class="loading">loading...</div></div>
   </div>
 
   <!-- NETWORK -->
   <div class="panel col2" data-id="network">
-    <div class="panel-expand-btn" data-expand="network"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="network"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Network · Interface</div>
     <div class="net-stats">
       <div class="net-card"><div class="net-val" id="net-rx">--</div><div class="net-label">Total RX</div></div>
@@ -439,7 +473,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- SYSTEM INFO -->
   <div class="panel col2" data-id="sysinfo">
-    <div class="panel-expand-btn" data-expand="sysinfo"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="sysinfo"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">System Info</div>
     <div id="sysinfo-section">
       <div class="sysinfo-row"><span class="si-key">AdGuard</span><span class="si-val" id="ag-version">--</span></div>
@@ -452,7 +486,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- NETALERTX -->
   <div class="panel col1" data-id="netalertx">
-    <div class="panel-expand-btn" data-expand="netalertx"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="netalertx"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">NetAlertX</div>
     <div class="big-num" id="netalertx-count" style="font-size:32px">--</div>
     <div class="big-sub">devices tracked</div>
@@ -463,7 +497,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- WEATHER -->
   <div class="panel col1" data-id="weather">
-    <div class="panel-expand-btn" data-expand="weather"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="weather"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">Weather</div>
     <div class="temp-wrap">
       <div class="temp-big" id="weather-temp" style="font-size:42px">--</div>
@@ -481,7 +515,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
   <!-- GITHUB -->
   <div class="panel col2" data-id="github">
-    <div class="panel-expand-btn" data-expand="github"><i class="ti ti-arrows-maximize"></i></div>
+    <div class="panel-expand-btn" data-expand="github"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h4v4M14 10l6-6M8 20H4v-4M10 14l-6 6"/></svg></div>
     <div class="panel-label">GitHub Activity</div>
     <div id="github-activity"><div class="loading">loading...</div></div>
   </div>
@@ -491,7 +525,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal-box">
-    <div class="modal-close" id="modal-close"><i class="ti ti-x"></i></div>
+    <div class="modal-scan"></div>
+    <div class="modal-close" id="modal-close" title="Close (Esc)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
     <div class="modal-title" id="modal-title">--</div>
     <div class="modal-body" id="modal-body"></div>
   </div>
@@ -516,8 +551,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="auth-error" id="auth-error"></div>
   </form>
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.1.0/iconfont/tabler-icons.min.css"></script>
 
 <script>
 const API = '/api/stats';
@@ -618,6 +651,8 @@ function notify(msg, type) {
 let prevSvcStates = null;
 let prevTempCrit = false;
 let prevDiskHigh = false;
+// which panel (if any) is currently expanded in the live modal
+let modalOpenFor = null;
 
 function updateClock() {
   const now = new Date();
@@ -824,6 +859,9 @@ function render(data) {
   // Last updated
   const t = new Date(data.timestamp);
   set('last-updated', t.toTimeString().slice(0,8));
+
+  // keep the expanded modal in sync with live data
+  if (modalOpenFor) refreshModal();
 }
 
 // Polling fallback (used only when the browser/proxy can't keep an SSE open).
@@ -1044,11 +1082,20 @@ function applyLayoutOrder(order) {
   });
 }
 
+function applySizes(sizes) {
+  if (!sizes) return;
+  getPanels().forEach(p => {
+    const span = sizes[p.dataset.id];
+    if (span) { p.style.gridColumn = 'span ' + span; p.dataset.span = span; }
+  });
+}
+
 async function loadLayout() {
   try {
     const res = await fetch('/api/layout');
     const layout = await res.json();
     if (layout && layout.order) applyLayoutOrder(layout.order);
+    if (layout && layout.sizes) applySizes(layout.sizes);
   } catch (e) {
     console.warn('layout load failed', e);
   }
@@ -1059,19 +1106,74 @@ function saveLayoutDebounced() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const order = getPanels().map(p => p.dataset.id);
+    const sizes = {};
+    getPanels().forEach(p => { if (p.dataset.span) sizes[p.dataset.id] = Number(p.dataset.span); });
     fetch('/api/layout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order }),
+      body: JSON.stringify({ order, sizes }),
     }).catch(() => {});
   }, 400);
+}
+
+// A click fires at the end of a drag-reorder or a resize; this flag stops that
+// from also opening the modal.
+let suppressClick = false;
+
+/* ----- column-span resize: drag the corner, snaps to the 12-col grid ----- */
+const MIN_SPAN = 2, MAX_SPAN = 12;
+let resizeState = null;
+
+function gridMetrics() {
+  const cs = getComputedStyle(dashGrid);
+  const gap = parseFloat(cs.columnGap) || 0;
+  const track = (dashGrid.clientWidth - gap * 11) / 12;
+  return { gap, track };
+}
+function pxToSpan(px) {
+  const { gap, track } = gridMetrics();
+  return Math.max(MIN_SPAN, Math.min(MAX_SPAN, Math.round((px + gap) / (track + gap))));
+}
+function startResize(panel, e) {
+  e.preventDefault();
+  e.stopPropagation();
+  suppressClick = true;
+  panel.setAttribute('draggable', 'false'); // stop HTML5 drag from hijacking the gesture
+  panel.classList.add('resizing');
+  resizeState = { panel, startX: e.clientX, startW: panel.getBoundingClientRect().width };
+  window.addEventListener('pointermove', onResizeMove);
+  window.addEventListener('pointerup', endResize, { once: true });
+}
+function onResizeMove(e) {
+  if (!resizeState) return;
+  const span = pxToSpan(resizeState.startW + (e.clientX - resizeState.startX));
+  resizeState.panel.style.gridColumn = 'span ' + span;
+  resizeState.panel.dataset.span = span;
+}
+function endResize() {
+  window.removeEventListener('pointermove', onResizeMove);
+  if (resizeState) {
+    resizeState.panel.classList.remove('resizing');
+    resizeState.panel.setAttribute('draggable', 'true');
+    resizeState = null;
+    saveLayoutDebounced();
+  }
+  setTimeout(() => { suppressClick = false; }, 80);
 }
 
 getPanels().forEach(panel => {
   panel.setAttribute('draggable', 'true');
 
+  // inject the resize grip
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  handle.title = 'Drag to resize';
+  panel.appendChild(handle);
+  handle.addEventListener('pointerdown', (e) => startResize(panel, e));
+
   panel.addEventListener('dragstart', (e) => {
     draggedEl = panel;
+    suppressClick = true;
     panel.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
   });
@@ -1080,6 +1182,7 @@ getPanels().forEach(panel => {
     panel.classList.remove('dragging');
     getPanels().forEach(p => p.classList.remove('drag-over'));
     saveLayoutDebounced();
+    setTimeout(() => { suppressClick = false; }, 80);
   });
 
   panel.addEventListener('dragover', (e) => {
@@ -1109,7 +1212,7 @@ getPanels().forEach(panel => {
 
 loadLayout();
 
-/* ============ EXPAND TO MODAL ============ */
+/* ============ EXPAND TO LIVE MODAL ============ */
 const modalBackdrop = document.getElementById('modal-backdrop');
 const modalTitle = document.getElementById('modal-title');
 const modalBody = document.getElementById('modal-body');
@@ -1132,32 +1235,54 @@ const MODAL_LABELS = {
   github: 'GitHub activity detail',
 };
 
-function openModal(panelId) {
-  const panel = dashGrid.querySelector(`[data-id="${panelId}"]`);
-  if (!panel) return;
-  modalTitle.textContent = MODAL_LABELS[panelId] || panelId;
+// Build a clean, enlarged copy of a panel for the modal (strip the controls
+// and the grid sizing so it fills the modal).
+function buildModalContent(panel) {
   const clone = panel.cloneNode(true);
-  clone.querySelectorAll('.panel-expand-btn').forEach(b => b.remove());
+  clone.querySelectorAll('.panel-expand-btn, .resize-handle').forEach(el => el.remove());
   clone.classList.remove('panel', 'col1', 'col2', 'col3', 'col4', 'col5', 'col6');
   clone.removeAttribute('draggable');
   clone.removeAttribute('style');
+  return clone;
+}
+
+function openModal(panelId) {
+  const panel = dashGrid.querySelector(`[data-id="${panelId}"]`);
+  if (!panel) return;
+  modalOpenFor = panelId;
+  modalTitle.innerHTML = '';
+  modalTitle.append(MODAL_LABELS[panelId] || panelId);
+  const live = document.createElement('span');
+  live.className = 'modal-live'; live.textContent = 'LIVE';
+  modalTitle.appendChild(live);
   modalBody.innerHTML = '';
-  modalBody.appendChild(clone);
+  modalBody.appendChild(buildModalContent(panel));
   modalBackdrop.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
+// Re-clone the source panel each refresh so the expanded view keeps updating.
+function refreshModal() {
+  if (!modalOpenFor) return;
+  const panel = dashGrid.querySelector(`[data-id="${modalOpenFor}"]`);
+  if (!panel) return;
+  modalBody.innerHTML = '';
+  modalBody.appendChild(buildModalContent(panel));
+}
+
 function closeModal() {
+  modalOpenFor = null;
   modalBackdrop.classList.remove('open');
   document.body.style.overflow = '';
 }
 
+// Whole-panel click opens the modal (unless we just dragged/resized, or the
+// click landed on the resize grip).
 dashGrid.addEventListener('click', (e) => {
-  const btn = e.target.closest('.panel-expand-btn');
-  if (btn) {
-    e.stopPropagation();
-    openModal(btn.dataset.expand);
-  }
+  if (suppressClick) return;
+  if (e.target.closest('.resize-handle')) return;
+  const panel = e.target.closest('.panel');
+  if (panel && panel.dataset.id) openModal(panel.dataset.id);
 });
 
 modalClose.addEventListener('click', closeModal);
