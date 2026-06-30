@@ -23,6 +23,9 @@ services:
       - KUMA_URL=http://192.168.1.49:3001
       - KUMA_API_KEY=${KUMA_API_KEY:-}
       - NETALERTX_URL=http://192.168.1.49:20211
+      - DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD:-}
+      - SESSION_SECRET=${SESSION_SECRET:-}
+      - REFRESH_MS=${REFRESH_MS:-3000}
     network_mode: host
     pid: host
 

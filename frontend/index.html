@@ -171,6 +171,46 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 /* REFRESH INDICATOR */
 .refresh-dot{position:fixed;bottom:12px;right:14px;font-family:'Share Tech Mono',monospace;font-size:9px;color:#38bdf8;opacity:.3;letter-spacing:1px;z-index:10}
 
+/* ============ AUTH OVERLAY ============ */
+.auth-overlay{position:fixed;inset:0;z-index:300;background:#020d18;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-overlay.hidden{display:none}
+.auth-overlay::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(14,165,233,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(14,165,233,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.auth-box{position:relative;width:min(400px,92vw);border:1px solid rgba(56,189,248,0.3);background:rgba(3,16,28,0.92);box-shadow:0 0 0 1px rgba(56,189,248,0.08),0 30px 80px rgba(0,0,0,0.6);padding:40px 34px 34px}
+.auth-box::before{content:'';position:absolute;top:0;left:0;width:22px;height:22px;border-top:2px solid #38bdf8;border-left:2px solid #38bdf8}
+.auth-box::after{content:'';position:absolute;bottom:0;right:0;width:22px;height:22px;border-bottom:2px solid #38bdf8;border-right:2px solid #38bdf8}
+.auth-logo{font-family:'Share Tech Mono',monospace;font-size:30px;color:#38bdf8;letter-spacing:10px;text-align:center;text-shadow:0 0 18px rgba(56,189,248,0.5)}
+.auth-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:#0ea5e9;letter-spacing:3px;text-transform:uppercase;text-align:center;opacity:.6;margin-top:8px;margin-bottom:26px}
+.auth-ring{width:46px;height:46px;border:2px solid rgba(56,189,248,0.15);border-top-color:#38bdf8;border-radius:50%;margin:0 auto 22px;animation:spin 1.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth-field{position:relative;margin-bottom:16px}
+.auth-field label{display:block;font-family:'Share Tech Mono',monospace;font-size:9px;color:#7dd3fc;letter-spacing:2px;text-transform:uppercase;opacity:.6;margin-bottom:7px}
+.auth-field input{width:100%;background:rgba(14,165,233,0.04);border:1px solid rgba(14,165,233,0.25);color:#e0f2fe;font-family:'Share Tech Mono',monospace;font-size:15px;letter-spacing:3px;padding:12px 13px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+.auth-field input:focus{border-color:#38bdf8;box-shadow:0 0 0 1px rgba(56,189,248,0.3)}
+.auth-btn{width:100%;background:linear-gradient(90deg,#0369a1,#0ea5e9);border:none;color:#e0f2fe;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:4px;text-transform:uppercase;padding:13px;cursor:pointer;transition:filter .15s ease,opacity .15s ease}
+.auth-btn:hover{filter:brightness(1.2)}
+.auth-btn:disabled{opacity:.5;cursor:wait}
+.auth-error{font-family:'Share Tech Mono',monospace;font-size:10px;color:#ef4444;letter-spacing:2px;text-align:center;margin-top:14px;min-height:13px;opacity:0;transition:opacity .2s ease}
+.auth-error.show{opacity:1}
+.auth-box.denied{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+
+/* ============ LOGOUT BUTTON ============ */
+.logout-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid rgba(14,165,233,0.25);color:#7dd3fc;cursor:pointer;opacity:.6;font-size:13px;transition:all .15s ease}
+.logout-btn:hover{opacity:1;border-color:#ef4444;color:#ef4444}
+
+/* ============ TOAST NOTIFICATIONS ============ */
+#toasts{position:fixed;top:14px;right:14px;z-index:400;display:flex;flex-direction:column;gap:8px;width:min(330px,calc(100vw - 28px));pointer-events:none}
+.toast{position:relative;display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid rgba(56,189,248,0.4);background:rgba(3,16,28,0.96);font-family:'Rajdhani',sans-serif;font-size:12.5px;letter-spacing:.5px;color:#7dd3fc;transform:translateX(120%);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.3,1.2),opacity .32s ease;box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+.toast.show{transform:translateX(0);opacity:1}
+.toast-icon{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0;box-shadow:0 0 9px currentColor}
+.toast.error{border-color:rgba(239,68,68,0.55);color:#fca5a5}
+.toast.ok{border-color:rgba(34,197,94,0.55);color:#86efac}
+.toast.warn{border-color:rgba(245,158,11,0.55);color:#fcd34d}
+
+/* ============ LIVE VALUE FLASH ============ */
+.flash-upd{animation:flashUpd .8s ease}
+@keyframes flashUpd{0%{color:#fff;text-shadow:0 0 10px rgba(56,189,248,0.8)}100%{}}
+
 /* ============================================================
    RESPONSIVE / MOBILE
    Desktop (>820px) layout is unchanged. Below that the 12-col
@@ -230,6 +270,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="header-left">
     <div class="status-pill"><div class="pulse"></div><span id="conn-status">CONNECTING</span></div>
     <div class="logo">J.A.R.V.I.S</div>
+    <div class="logout-btn" id="logout-btn" title="Sign out" style="display:none"><i class="ti ti-power"></i></div>
   </div>
   <div class="header-right">
     <div class="time" id="clock">--:--:--</div>
@@ -457,6 +498,25 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 </div>
 
 <div class="refresh-dot" id="refresh-dot">● LIVE</div>
+
+<!-- TOAST NOTIFICATIONS -->
+<div id="toasts"></div>
+
+<!-- AUTH OVERLAY -->
+<div class="auth-overlay hidden" id="auth-overlay">
+  <form class="auth-box" id="auth-box" autocomplete="off">
+    <div class="auth-ring"></div>
+    <div class="auth-logo">J.A.R.V.I.S</div>
+    <div class="auth-sub">Secure Terminal · Identity Required</div>
+    <div class="auth-field">
+      <label for="auth-input">Access Key</label>
+      <input type="password" id="auth-input" autocomplete="current-password" autofocus>
+    </div>
+    <button type="submit" class="auth-btn" id="auth-btn">Authenticate</button>
+    <div class="auth-error" id="auth-error"></div>
+  </form>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.1.0/iconfont/tabler-icons.min.css"></script>
 
 <script>
@@ -492,7 +552,16 @@ function fmtNum(n) {
 
 function set(id, val) {
   const el = document.getElementById(id);
-  if (el) el.textContent = val;
+  if (!el) return;
+  const next = String(val);
+  // briefly highlight values that actually changed, so the board feels live
+  if (el.dataset.init && el.textContent !== next && next !== '--') {
+    el.classList.remove('flash-upd');
+    void el.offsetWidth;
+    el.classList.add('flash-upd');
+  }
+  el.dataset.init = '1';
+  el.textContent = next;
 }
 
 function setWidth(id, pct) {
@@ -504,6 +573,51 @@ function setClass(id, cls) {
   const el = document.getElementById(id);
   if (el) { el.className = el.className.replace(/\b(up|down|warn|ok|hot|danger)\b/g, ''); el.classList.add(cls); }
 }
+
+// Smoothly tween a headline number to its new value so it visibly counts.
+const numState = {};
+function animateNumber(id, to, fmt) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  to = Number(to) || 0;
+  const from = numState[id] != null ? numState[id] : to;
+  numState[id] = to;
+  if (from === to) { el.textContent = fmt ? fmt(to) : to; return; }
+  const dur = 650, start = performance.now();
+  function step(now) {
+    const p = Math.min(1, (now - start) / dur);
+    const v = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+    el.textContent = fmt ? fmt(v) : v;
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// Themed toast notifications. Identical messages are debounced for 8s so a
+// persistent fault doesn't spam the corner.
+const toastSeen = {};
+function notify(msg, type) {
+  type = type || 'info';
+  const key = type + ':' + msg;
+  const now = Date.now();
+  if (toastSeen[key] && now - toastSeen[key] < 8000) return;
+  toastSeen[key] = now;
+  const wrap = document.getElementById('toasts');
+  if (!wrap) return;
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icon = document.createElement('span'); icon.className = 'toast-icon';
+  const text = document.createElement('span'); text.textContent = msg;
+  el.appendChild(icon); el.appendChild(text);
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 350); }, 6000);
+}
+
+// edge-triggered alert state
+let prevSvcStates = null;
+let prevTempCrit = false;
+let prevDiskHigh = false;
 
 function updateClock() {
   const now = new Date();
@@ -530,7 +644,7 @@ function render(data) {
 
   // CPU
   const cpu = Math.round(sys.cpu.usage);
-  set('cpu-pct', cpu + '%');
+  animateNumber('cpu-pct', cpu, v => v + '%');
   setWidth('cpu-bar', cpu);
   document.getElementById('cpu-bar').className = 'fill' + (cpu > 80 ? ' danger' : cpu > 60 ? ' warn' : '');
 
@@ -542,7 +656,7 @@ function render(data) {
   set('load15', load15); setWidth('load15-bar', sys.cpu.load15 * 25);
 
   // Memory
-  set('mem-pct', sys.memory.pct + '%');
+  animateNumber('mem-pct', sys.memory.pct, v => v + '%');
   setWidth('mem-bar', sys.memory.pct);
   document.getElementById('mem-bar').className = 'fill' + (sys.memory.pct > 85 ? ' danger' : sys.memory.pct > 65 ? ' warn' : '');
   set('mem-total', fmtBytes(sys.memory.total));
@@ -554,13 +668,16 @@ function render(data) {
 
   // Temp
   if (sys.temperature !== null) {
-    set('temp-val', sys.temperature);
+    animateNumber('temp-val', sys.temperature, v => v);
     setWidth('temp-bar', (sys.temperature / 100) * 100);
     const tStatus = sys.temperature >= 85 ? 'CRITICAL' : sys.temperature >= 70 ? 'WARM' : 'NOMINAL';
     const tClass = sys.temperature >= 85 ? 'hot' : sys.temperature >= 70 ? 'warm' : 'ok';
     set('temp-status', tStatus);
     document.getElementById('temp-status').className = 'temp-status ' + tClass;
     document.getElementById('temp-bar').className = 'fill' + (sys.temperature >= 85 ? ' danger' : sys.temperature >= 70 ? ' warn' : '');
+    const crit = sys.temperature >= 85;
+    if (crit && !prevTempCrit) notify('TEMPERATURE CRITICAL — ' + sys.temperature + '°C', 'error');
+    prevTempCrit = crit;
   } else {
     set('temp-val', 'N/A');
     set('temp-status', 'NO SENSOR');
@@ -577,6 +694,9 @@ function render(data) {
   set('disk-total', fmtBytes(sys.disk.total));
   set('disk-used', fmtBytes(sys.disk.used));
   set('disk-free', fmtBytes(sys.disk.free));
+  const diskHigh = sys.disk.pct >= 90;
+  if (diskHigh && !prevDiskHigh) notify('DISK SPACE LOW — ' + sys.disk.pct + '% USED', 'warn');
+  prevDiskHigh = diskHigh;
 
   // Network
   set('net-rx', fmtBytes(sys.network.rx_bytes));
@@ -584,12 +704,23 @@ function render(data) {
 
   // Services
   const svcsEl = document.getElementById('services-grid');
+  const svcStates = {};
   svcsEl.innerHTML = SERVICES.map(s => {
     let state = checkDocker(data, s.name) || (s.check ? s.check(data) : null);
+    svcStates[s.name] = state;
     const cls = state === true ? 'up' : state === false ? 'down' : 'warn';
     const label = state === true ? 'ONLINE' : state === false ? 'OFFLINE' : 'UNKNOWN';
     return `<div class="svc"><div class="dot ${cls}"></div><span class="svc-name">${s.name}</span><span class="svc-badge ${cls}">${label}</span></div>`;
   }).join('');
+  // alert on services flipping up<->down (skip the very first render)
+  if (prevSvcStates) {
+    Object.keys(svcStates).forEach(name => {
+      const was = prevSvcStates[name], now = svcStates[name];
+      if (was === true && now === false) notify('SERVICE OFFLINE — ' + name.toUpperCase(), 'error');
+      else if (was === false && now === true) notify('SERVICE RESTORED — ' + name.toUpperCase(), 'ok');
+    });
+  }
+  prevSvcStates = svcStates;
 
   // Docker containers
   const tbody = document.getElementById('docker-tbody');
@@ -615,7 +746,7 @@ function render(data) {
 
   // AdGuard
   if (ag) {
-    set('ag-queries', fmtNum(ag.queries));
+    animateNumber('ag-queries', ag.queries, v => v.toLocaleString());
     set('ag-blocked', fmtNum(ag.blocked));
     set('ag-pct', ag.blocked_pct + '%');
     set('ag-latency', ag.avg_latency_ms + 'ms');
@@ -695,20 +826,16 @@ function render(data) {
   set('last-updated', t.toTimeString().slice(0,8));
 }
 
+// Polling fallback (used only when the browser/proxy can't keep an SSE open).
 async function fetchAndRender() {
   try {
     const r = await fetch(API);
+    if (r.status === 401) { showLogin(); return; }
     if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    render(data);
-    document.getElementById('refresh-dot').textContent = '● LIVE';
-    document.getElementById('refresh-dot').style.color = '#22c55e';
+    render(await r.json());
+    markLinkUp();
   } catch (e) {
-    set('conn-status', 'OFFLINE');
-    document.querySelector('.status-pill').style.color = '#ef4444';
-    document.querySelector('.pulse').style.background = '#ef4444';
-    document.getElementById('refresh-dot').textContent = '● ERROR';
-    document.getElementById('refresh-dot').style.color = '#ef4444';
+    markLinkDown();
     console.error('fetch error:', e);
   }
 }
@@ -766,13 +893,138 @@ function initWeather() {
   }
 }
 
+/* ============ LIVE TELEMETRY (SSE primary, polling fallback) ============ */
+let es = null;
+let pollTimer = null;
+let linkDown = false;
+let everConnected = false;
+
+function markLinkUp() {
+  everConnected = true;
+  if (linkDown) { notify('TELEMETRY LINK RE-ESTABLISHED', 'ok'); linkDown = false; }
+  const dot = document.getElementById('refresh-dot');
+  dot.textContent = '● LIVE'; dot.style.color = '#22c55e';
+}
+
+function markLinkDown() {
+  if (everConnected && !linkDown) { linkDown = true; notify('TELEMETRY LINK LOST — RECONNECTING', 'error'); }
+  set('conn-status', 'OFFLINE');
+  const pill = document.querySelector('.status-pill');
+  const pulse = document.querySelector('.pulse');
+  if (pill) pill.style.color = '#ef4444';
+  if (pulse) pulse.style.background = '#ef4444';
+  const dot = document.getElementById('refresh-dot');
+  dot.textContent = '● RECONNECTING'; dot.style.color = '#ef4444';
+}
+
+function stopTelemetry() {
+  if (es) { es.close(); es = null; }
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+function startTelemetry() {
+  stopTelemetry();
+  if (window.EventSource) openStream();
+  else startPolling();
+}
+
+function openStream() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  try { es = new EventSource('/api/events'); }
+  catch { return startPolling(); }
+
+  es.onopen = () => markLinkUp();
+  es.onmessage = (e) => { try { render(JSON.parse(e.data)); markLinkUp(); } catch {} };
+  es.onerror = async () => {
+    if (es) { es.close(); es = null; }
+    markLinkDown();
+    // an error here can mean the session expired — verify before retrying
+    try {
+      const me = await (await fetch('/api/me')).json();
+      if (me.authRequired && !me.authed) { showLogin(); return; }
+    } catch {}
+    setTimeout(() => { if (!es && !pollTimer) openStream(); }, 5000);
+  };
+}
+
+function startPolling() {
+  fetchAndRender();
+  pollTimer = setInterval(fetchAndRender, 5000);
+}
+
+/* ============ AUTH ============ */
+const authOverlay = document.getElementById('auth-overlay');
+const authBox = document.getElementById('auth-box');
+const authInput = document.getElementById('auth-input');
+const authBtn = document.getElementById('auth-btn');
+const authError = document.getElementById('auth-error');
+const logoutBtn = document.getElementById('logout-btn');
+
+function showLogin() {
+  stopTelemetry();
+  logoutBtn.style.display = 'none';
+  authOverlay.classList.remove('hidden');
+  setTimeout(() => authInput.focus(), 60);
+}
+function hideLogin() {
+  authOverlay.classList.add('hidden');
+  authInput.value = '';
+  authError.classList.remove('show');
+}
+function showLoginError(msg) {
+  authError.textContent = msg;
+  authError.classList.add('show');
+  authBox.classList.remove('denied'); void authBox.offsetWidth; authBox.classList.add('denied');
+}
+
+authBox.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pw = authInput.value;
+  if (!pw) return;
+  authBtn.disabled = true; authBtn.textContent = 'Verifying...';
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw }),
+    });
+    if (r.ok) {
+      hideLogin();
+      logoutBtn.style.display = 'flex';
+      startTelemetry();
+    } else {
+      showLoginError('ACCESS DENIED');
+      authInput.value = ''; authInput.focus();
+    }
+  } catch {
+    showLoginError('CONNECTION ERROR');
+  } finally {
+    authBtn.disabled = false; authBtn.textContent = 'Authenticate';
+  }
+});
+
+logoutBtn.addEventListener('click', async () => {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch {}
+  showLogin();
+});
+
+async function boot() {
+  let me;
+  try { me = await (await fetch('/api/me')).json(); }
+  catch { me = { authed: true, authRequired: false }; }
+  if (me.authRequired) {
+    logoutBtn.style.display = me.authed ? 'flex' : 'none';
+    if (!me.authed) { showLogin(); return; }
+  }
+  startTelemetry();
+}
+
 initWeather();
 setInterval(initWeather, 10 * 60 * 1000);
 
 setInterval(updateClock, 1000);
 updateClock();
-fetchAndRender();
-setInterval(fetchAndRender, 10000);
+boot();
 
 /* ============ DRAG-AND-DROP REORDERING ============ */
 const dashGrid = document.getElementById('dashboard-grid');

@@ -1,2 +1,6 @@
 .env
 node_modules/
+
+# runtime-generated, never commit (the session secret especially)
+data/.session-secret
+data/layout.json

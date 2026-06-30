@@ -1,6 +1,7 @@
 const http = require('http');
 const { exec } = require('child_process');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const ADGUARD_URL = process.env.ADGUARD_URL || 'http://localhost:3000';
 const ADGUARD_USER = process.env.ADGUARD_USER || 'tymastrangelo';
@@ -12,6 +13,71 @@ const GITHUB_USERNAME = process.env.GITHUB_USERNAME || 'tymastrangelo';
 const WEATHER_LAT = process.env.WEATHER_LAT || '25.9408';
 const WEATHER_LON = process.env.WEATHER_LON || '-81.7187';
 const PORT = process.env.PORT || 4000;
+
+// ---- Auth + live-update config ----
+// If DASHBOARD_PASSWORD is empty, auth is DISABLED and the dashboard stays
+// open. This is deliberate: it guarantees you can never lock yourself out by
+// deploying before configuring a password. Set it in .env to turn auth on.
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || '';
+const AUTH_ENABLED = DASHBOARD_PASSWORD.length > 0;
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const REFRESH_MS = parseInt(process.env.REFRESH_MS || '3000', 10); // live push cadence
+const DATA_DIR = '/app/data-persist';
+
+// Session-signing secret. Persisted so logins survive backend restarts.
+// Falls back to in-memory if the volume isn't writable (logins reset on restart).
+function loadOrCreateSecret() {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  const file = DATA_DIR + '/.session-secret';
+  try { return fs.readFileSync(file, 'utf8').trim(); } catch {}
+  const secret = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(file, secret, { mode: 0o600 });
+  } catch {}
+  return secret;
+}
+const SESSION_SECRET = loadOrCreateSecret();
+
+function b64url(input) {
+  return Buffer.from(input).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function signPayload(payload) {
+  return b64url(crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest());
+}
+function makeToken() {
+  const payload = b64url(JSON.stringify({ exp: Date.now() + SESSION_TTL_MS }));
+  return payload + '.' + signPayload(payload);
+}
+function verifyToken(token) {
+  if (!token || token.indexOf('.') < 0) return false;
+  const [payload, sig] = token.split('.');
+  const expected = signPayload(payload);
+  if (!sig || sig.length !== expected.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
+  try {
+    const data = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64'));
+    return data.exp > Date.now();
+  } catch { return false; }
+}
+function parseCookies(req) {
+  const out = {};
+  (req.headers.cookie || '').split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  });
+  return out;
+}
+function isAuthed(req) {
+  if (!AUTH_ENABLED) return true;
+  return verifyToken(parseCookies(req).jarvis_session);
+}
+function safeStrEqual(a, b) {
+  const ab = Buffer.from(String(a)), bb = Buffer.from(String(b));
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 function run(cmd) {
   return new Promise((resolve) => {
@@ -344,7 +410,7 @@ async function getDockerDetails() {
   return getDockerStatsViaSocket();
 }
 
-async function getStats() {
+async function computeStats() {
   const [system, adguard, tailscale, dockerDetails, uptimeKuma, netalertx, github] = await Promise.all([
     getSystemStats(),
     getAdguardStats(),
@@ -387,6 +453,50 @@ function saveLayout(layout) {
   }
 }
 
+// ---- Live stats cache + Server-Sent Events fan-out ----
+// One compute loop refreshes the cache every REFRESH_MS and pushes to every
+// connected client, instead of each browser triggering its own expensive
+// gather. Sampling on a fixed cadence also makes the CPU delta consistent.
+let latestStats = null;
+let lastError = null;
+const sseClients = new Set();
+
+function broadcast(stats) {
+  const frame = `data: ${JSON.stringify(stats)}\n\n`;
+  for (const res of sseClients) { try { res.write(frame); } catch {} }
+}
+
+async function refreshLoop() {
+  try {
+    latestStats = await computeStats();
+    lastError = null;
+    broadcast(latestStats);
+  } catch (e) {
+    lastError = e.message;
+  } finally {
+    setTimeout(refreshLoop, REFRESH_MS);
+  }
+}
+
+// Heartbeat keeps the SSE connection alive through proxy/tunnel idle timeouts.
+setInterval(() => {
+  for (const res of sseClients) { try { res.write(': ping\n\n'); } catch {} }
+}, 15000);
+
+function sendJson(res, code, obj) {
+  res.statusCode = code;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(obj));
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let body = '';
+    req.on('data', c => body += c);
+    req.on('end', () => resolve(body));
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -398,36 +508,82 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
+  // ----- Auth endpoints (always open) -----
+  if (req.url === '/api/me') {
+    return sendJson(res, 200, { authed: isAuthed(req), authRequired: AUTH_ENABLED });
+  }
+
+  if (req.url === '/api/login' && req.method === 'POST') {
+    const body = await readBody(req);
+    let password = '';
+    try { password = (JSON.parse(body || '{}').password) || ''; } catch {}
+    if (!AUTH_ENABLED) return sendJson(res, 200, { ok: true, authRequired: false });
+    if (safeStrEqual(password, DASHBOARD_PASSWORD)) {
+      const token = makeToken();
+      res.setHeader('Set-Cookie',
+        `jarvis_session=${token}; HttpOnly; Path=/; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}; SameSite=Lax`);
+      return sendJson(res, 200, { ok: true });
+    }
+    return sendJson(res, 401, { ok: false, error: 'invalid credentials' });
+  }
+
+  if (req.url === '/api/logout' && req.method === 'POST') {
+    res.setHeader('Set-Cookie', 'jarvis_session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax');
+    return sendJson(res, 200, { ok: true });
+  }
+
+  if (req.url === '/health') {
+    return sendJson(res, 200, { ok: true });
+  }
+
+  // ----- Everything below requires auth (when enabled) -----
+  if (!isAuthed(req)) {
+    return sendJson(res, 401, { error: 'unauthorized' });
+  }
+
+  // Live event stream
+  if (req.url === '/api/events') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.write('retry: 5000\n\n');
+    if (latestStats) res.write(`data: ${JSON.stringify(latestStats)}\n\n`);
+    sseClients.add(res);
+    req.on('close', () => sseClients.delete(res));
+    return;
+  }
+
   if (req.url === '/api/stats') {
     try {
-      const stats = await getStats();
-      res.end(JSON.stringify(stats));
+      const stats = latestStats || await computeStats();
+      return sendJson(res, 200, stats);
     } catch (e) {
-      res.statusCode = 500;
-      res.end(JSON.stringify({ error: e.message }));
+      return sendJson(res, 500, { error: e.message });
     }
-  } else if (req.url === '/api/layout' && req.method === 'GET') {
-    const layout = loadLayout();
-    res.end(JSON.stringify(layout || {}));
-  } else if (req.url === '/api/layout' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      try {
-        const layout = JSON.parse(body);
-        const ok = saveLayout(layout);
-        res.end(JSON.stringify({ ok }));
-      } catch (e) {
-        res.statusCode = 400;
-        res.end(JSON.stringify({ error: 'invalid json' }));
-      }
-    });
-  } else if (req.url === '/health') {
-    res.end(JSON.stringify({ ok: true }));
-  } else {
-    res.statusCode = 404;
-    res.end(JSON.stringify({ error: 'not found' }));
   }
+
+  if (req.url === '/api/layout' && req.method === 'GET') {
+    return sendJson(res, 200, loadLayout() || {});
+  }
+
+  if (req.url === '/api/layout' && req.method === 'POST') {
+    const body = await readBody(req);
+    try {
+      const ok = saveLayout(JSON.parse(body));
+      return sendJson(res, 200, { ok });
+    } catch (e) {
+      return sendJson(res, 400, { error: 'invalid json' });
+    }
+  }
+
+  return sendJson(res, 404, { error: 'not found' });
 });
 
-server.listen(PORT, () => console.log(`JARVIS backend running on :${PORT}`));
+server.listen(PORT, () => {
+  console.log(`JARVIS backend running on :${PORT} (auth ${AUTH_ENABLED ? 'ENABLED' : 'disabled'})`);
+  refreshLoop();
+});
