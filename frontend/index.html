@@ -338,6 +338,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="panel-label">NetAlertX</div>
     <div class="big-num" id="netalertx-count" style="font-size:32px">--</div>
     <div class="big-sub">devices tracked</div>
+    <div style="margin-top:10px">
+      <div class="sysinfo-row"><span class="si-key">Online now</span><span class="si-val" id="netalertx-online">--</span></div>
+    </div>
   </div>
 
 </div>
@@ -563,7 +566,6 @@ function render(data) {
         <div class="ts-device">
           <div class="dot ${m.up ? 'up' : 'down'}"></div>
           <span class="ts-name">${m.id}</span>
-          <span class="ts-ip">${m.ping !== null ? m.ping + 'ms' : '--'}</span>
         </div>
       `).join('');
     } else {
@@ -578,6 +580,7 @@ function render(data) {
   // NetAlertX
   const nax = data.netalertx;
   set('netalertx-count', nax && nax.available ? nax.count : 'N/A');
+  set('netalertx-online', nax && nax.available && nax.online !== null ? nax.online : '--');
 
   // Last updated
   const t = new Date(data.timestamp);

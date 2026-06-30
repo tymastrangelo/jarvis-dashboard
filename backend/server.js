@@ -6,6 +6,7 @@ const ADGUARD_URL = process.env.ADGUARD_URL || 'http://localhost:3000';
 const ADGUARD_USER = process.env.ADGUARD_USER || 'tymastrangelo';
 const ADGUARD_PASS = process.env.ADGUARD_PASS || '';
 const KUMA_URL = process.env.KUMA_URL || 'http://localhost:3001';
+const KUMA_API_KEY = process.env.KUMA_API_KEY || '';
 const NETALERTX_URL = process.env.NETALERTX_URL || 'http://localhost:20211';
 const PORT = process.env.PORT || 4000;
 
@@ -70,28 +71,42 @@ function fetchJson(fullUrl, headers) {
 }
 
 async function getUptimeKumaStatus() {
-  const data = await fetchJson(`${KUMA_URL}/api/status-page/heartbeat/default`);
-  if (data && data.heartbeatList) {
-    const monitors = Object.keys(data.heartbeatList);
-    let up = 0, down = 0;
-    const details = monitors.map(id => {
-      const beats = data.heartbeatList[id];
-      const latest = beats[beats.length - 1];
-      const isUp = latest && latest.status === 1;
-      if (isUp) up++; else down++;
-      return { id, up: isUp, ping: latest ? latest.ping : null };
+  if (!KUMA_API_KEY) return { available: false, reason: 'no api key configured' };
+  const auth = Buffer.from(`${KUMA_API_KEY}:`).toString('base64');
+  const metricsText = await new Promise((resolve) => {
+    const req = require('http').get(`${KUMA_URL}/metrics`, {
+      headers: { 'Authorization': `Basic ${auth}` }
+    }, (res) => {
+      let data = '';
+      res.on('data', d => data += d);
+      res.on('end', () => resolve(res.statusCode === 200 ? data : null));
     });
-    return { up, down, total: monitors.length, monitors: details, available: true };
-  }
-  return { available: false };
+    req.on('error', () => resolve(null));
+    req.setTimeout(3000, () => { req.destroy(); resolve(null); });
+  });
+  if (!metricsText) return { available: false, reason: 'fetch failed' };
+
+  const lines = metricsText.split('\n').filter(l => l.startsWith('monitor_status'));
+  const monitors = lines.map(line => {
+    const nameMatch = line.match(/monitor_name="([^"]+)"/);
+    const valueMatch = line.match(/\}\s+(\d+)/);
+    return {
+      id: nameMatch ? nameMatch[1] : 'unknown',
+      up: valueMatch ? valueMatch[1] === '1' : false,
+    };
+  });
+  const up = monitors.filter(m => m.up).length;
+  const down = monitors.length - up;
+  return { up, down, total: monitors.length, monitors, available: true };
 }
 
 async function getNetAlertXDevices() {
-  const data = await fetchJson(`${NETALERTX_URL}/php/server/devices.php?action=getDevices`);
-  if (Array.isArray(data)) {
-    return { count: data.length, available: true };
-  }
-  return { available: false, count: null };
+  const raw = await run(`sqlite3 /netalertx-db/app.db "SELECT COUNT(*), SUM(CASE WHEN devPresentLastScan=1 THEN 1 ELSE 0 END) FROM Devices;" 2>&1`);
+  const parts = raw.split('|').map(s => s.trim());
+  const total = parseInt(parts[0]);
+  if (isNaN(total)) return { available: false, count: null, error: raw.slice(0, 150) };
+  const online = parseInt(parts[1]);
+  return { available: true, count: total, online: isNaN(online) ? null : online };
 }
 
 async function getSystemStats() {
@@ -113,7 +128,7 @@ async function getSystemStats() {
     run("cat /host/etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d'\"' -f2 || echo 'Ubuntu 24.04'"),
     run("uname -r"),
     run("free -b | awk 'NR==3{print $2,$3,$4}'"),
-    run("pgrep -x cloudflared > /dev/null && echo running || echo stopped"),
+    run("pgrep -f cloudflared > /dev/null && echo running || echo stopped"),
   ]);
 
   const dockerContainers = await getDockerViaSocket();
