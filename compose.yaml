@@ -13,6 +13,7 @@ services:
       - /var/run/tailscale:/var/run/tailscale:ro
       - /etc/os-release:/host/etc/os-release:ro
       - /opt/stacks/netalertx/data/db:/netalertx-db:ro
+      - ./data:/app/data-persist
     command: sh -c "apk add --no-cache sqlite > /dev/null 2>&1 && node server.js"
     environment:
       - PORT=4000

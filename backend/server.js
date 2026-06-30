@@ -366,9 +366,38 @@ async function getStats() {
   };
 }
 
+const path = require('path');
+const LAYOUT_FILE = '/app/data-persist/layout.json';
+
+function loadLayout() {
+  try {
+    return JSON.parse(fs.readFileSync(LAYOUT_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function saveLayout(layout) {
+  try {
+    fs.mkdirSync('/app/data-persist', { recursive: true });
+    fs.writeFileSync(LAYOUT_FILE, JSON.stringify(layout));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    return res.end();
+  }
+
   if (req.url === '/api/stats') {
     try {
       const stats = await getStats();
@@ -377,6 +406,22 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.end(JSON.stringify({ error: e.message }));
     }
+  } else if (req.url === '/api/layout' && req.method === 'GET') {
+    const layout = loadLayout();
+    res.end(JSON.stringify(layout || {}));
+  } else if (req.url === '/api/layout' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const layout = JSON.parse(body);
+        const ok = saveLayout(layout);
+        res.end(JSON.stringify({ ok }));
+      } catch (e) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: 'invalid json' }));
+      }
+    });
   } else if (req.url === '/health') {
     res.end(JSON.stringify({ ok: true }));
   } else {

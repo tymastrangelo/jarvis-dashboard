@@ -25,8 +25,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .header-right .time{font-size:18px;color:#e0f2fe}
 .header-right .sub{opacity:0.45;font-size:10px}
 
-/* GRID */
-.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
 .col1{grid-column:span 3}
 .col2{grid-column:span 4}
 .col3{grid-column:span 5}
@@ -34,11 +32,37 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .col5{grid-column:span 8}
 .col6{grid-column:span 12}
 
-/* PANEL */
-.panel{border:1px solid rgba(14,165,233,0.2);background:rgba(3,16,28,0.85);padding:13px;position:relative}
 .panel::before{content:'';position:absolute;top:0;left:0;width:16px;height:16px;border-top:2px solid #0ea5e9;border-left:2px solid #0ea5e9}
 .panel::after{content:'';position:absolute;bottom:0;right:0;width:16px;height:16px;border-bottom:2px solid #0ea5e9;border-right:2px solid #0ea5e9}
 .panel-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:#0ea5e9;letter-spacing:3px;text-transform:uppercase;margin-bottom:11px;opacity:0.65}
+
+/* DRAGGABLE GRID SYSTEM */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px;position:relative}
+.panel{border:1px solid rgba(14,165,233,0.2);background:rgba(3,16,28,0.85);padding:13px;position:relative;cursor:grab;transition:box-shadow .2s ease,border-color .2s ease,transform .15s ease}
+.panel:active{cursor:grabbing}
+.panel:hover{border-color:rgba(56,189,248,0.55);box-shadow:0 0 0 1px rgba(56,189,248,0.15),0 8px 24px rgba(0,0,0,0.4)}
+.panel.dragging{opacity:0.4;cursor:grabbing}
+.panel.drag-over{border-color:#38bdf8;box-shadow:0 0 0 2px rgba(56,189,248,0.4)}
+.panel-expand-btn{position:absolute;top:8px;right:10px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:#0ea5e9;opacity:0.45;cursor:pointer;z-index:5;font-size:13px;transition:opacity .15s ease}
+.panel-expand-btn:hover{opacity:1}
+.panel-drag-handle{position:absolute;top:8px;left:10px;color:#0ea5e9;opacity:0.25;font-size:11px;letter-spacing:2px;cursor:grab;user-select:none}
+
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(2,8,16,0.75);backdrop-filter:blur(3px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s ease}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal-box{background:#03101c;border:1px solid rgba(56,189,248,0.4);box-shadow:0 0 0 1px rgba(56,189,248,0.1),0 30px 80px rgba(0,0,0,0.6);width:min(720px,90vw);max-height:82vh;overflow-y:auto;padding:28px;position:relative;transform:scale(0.92) translateY(16px);transition:transform .3s cubic-bezier(.2,.9,.3,1.2);border-radius:2px}
+.modal-backdrop.open .modal-box{transform:scale(1) translateY(0)}
+.modal-box::before{content:'';position:absolute;top:0;left:0;width:24px;height:24px;border-top:2px solid #38bdf8;border-left:2px solid #38bdf8}
+.modal-box::after{content:'';position:absolute;bottom:0;right:0;width:24px;height:24px;border-bottom:2px solid #38bdf8;border-right:2px solid #38bdf8}
+.modal-close{position:absolute;top:18px;right:20px;color:#38bdf8;font-size:18px;cursor:pointer;opacity:0.6;width:28px;height:28px;display:flex;align-items:center;justify-content:center;transition:opacity .15s ease}
+.modal-close:hover{opacity:1}
+.modal-title{font-family:'Share Tech Mono',monospace;font-size:14px;color:#38bdf8;letter-spacing:4px;text-transform:uppercase;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(56,189,248,0.2)}
+.modal-body{font-size:13px}
+.modal-body .top-list{margin-top:8px}
+.modal-body .top-item{font-size:12px;padding:4px 0}
+
+/* PANEL FOCUS HALO when expanded source */
+.panel.expanding{box-shadow:0 0 0 2px #38bdf8;z-index:10}
 
 /* GAUGES */
 .gauge-row{display:flex;flex-direction:column;gap:9px}
@@ -164,10 +188,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 </div>
 
-<div class="grid">
+<div class="grid" id="dashboard-grid">
 
   <!-- CPU / LOAD -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="cpu">
+    <div class="panel-expand-btn" data-expand="cpu"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">CPU & Load</div>
     <div class="gauge-row">
       <div class="gauge-item">
@@ -193,7 +218,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- MEMORY -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="memory">
+    <div class="panel-expand-btn" data-expand="memory"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Memory</div>
     <div class="gauge-row">
       <div class="gauge-item">
@@ -214,7 +240,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- TEMPERATURE -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="temperature">
+    <div class="panel-expand-btn" data-expand="temperature"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Temperature</div>
     <div class="temp-wrap">
       <div class="temp-big" id="temp-val">--</div>
@@ -230,7 +257,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- UPTIME -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="uptime">
+    <div class="panel-expand-btn" data-expand="uptime"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Uptime</div>
     <div class="uptime-grid">
       <div class="uptime-part"><div class="uptime-num" id="up-days">--</div><div class="uptime-label">days</div></div>
@@ -245,7 +273,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- SERVICES -->
-  <div class="panel col2">
+  <div class="panel col2" data-id="services">
+    <div class="panel-expand-btn" data-expand="services"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Services</div>
     <div class="service-grid" id="services-grid">
       <div class="loading">scanning...</div>
@@ -253,7 +282,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- DOCKER CONTAINERS -->
-  <div class="panel col2">
+  <div class="panel col2" data-id="docker">
+    <div class="panel-expand-btn" data-expand="docker"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Docker Containers</div>
     <table class="docker-table">
       <thead><tr><th>Container</th><th>CPU</th><th>Memory</th><th>Net I/O</th></tr></thead>
@@ -262,7 +292,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- ADGUARD STATS -->
-  <div class="panel col2">
+  <div class="panel col2" data-id="adguard">
+    <div class="panel-expand-btn" data-expand="adguard"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">AdGuard Home · DNS</div>
     <div class="ag-grid">
       <div class="ag-card"><div class="ag-val" id="ag-queries">--</div><div class="ag-label">Queries (24h)</div></div>
@@ -277,7 +308,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- DISK -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="disk">
+    <div class="panel-expand-btn" data-expand="disk"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Disk</div>
     <div id="disk-section">
       <div class="disk-item">
@@ -294,13 +326,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- TAILSCALE -->
-  <div class="panel col2">
+  <div class="panel col2" data-id="tailscale">
+    <div class="panel-expand-btn" data-expand="tailscale"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Tailscale Network</div>
     <div id="ts-devices"><div class="loading">loading...</div></div>
   </div>
 
   <!-- NETWORK -->
-  <div class="panel col2">
+  <div class="panel col2" data-id="network">
+    <div class="panel-expand-btn" data-expand="network"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Network · Interface</div>
     <div class="net-stats">
       <div class="net-card"><div class="net-val" id="net-rx">--</div><div class="net-label">Total RX</div></div>
@@ -312,8 +346,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
   </div>
 
-  <!-- ADGUARD STATUS -->
-  <div class="panel col2">
+  <!-- SYSTEM INFO -->
+  <div class="panel col2" data-id="sysinfo">
+    <div class="panel-expand-btn" data-expand="sysinfo"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">System Info</div>
     <div id="sysinfo-section">
       <div class="sysinfo-row"><span class="si-key">AdGuard</span><span class="si-val" id="ag-version">--</span></div>
@@ -323,18 +358,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="sysinfo-row"><span class="si-key">Tailscale IP</span><span class="si-val">100.69.206.67</span></div>
     </div>
   </div>
-  <!-- UPTIME KUMA -->
-  <div class="panel col2">
-    <div class="panel-label">Uptime Kuma · Site Monitoring</div>
-    <div class="ag-grid" style="grid-template-columns:1fr 1fr">
-      <div class="ag-card"><div class="ag-val" id="kuma-up" style="color:#22c55e">--</div><div class="ag-label">Sites Up</div></div>
-      <div class="ag-card"><div class="ag-val" id="kuma-down" style="color:#ef4444">--</div><div class="ag-label">Sites Down</div></div>
-    </div>
-    <div id="kuma-detail" style="margin-top:6px"><div class="loading">loading...</div></div>
-  </div>
 
   <!-- NETALERTX -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="netalertx">
+    <div class="panel-expand-btn" data-expand="netalertx"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">NetAlertX</div>
     <div class="big-num" id="netalertx-count" style="font-size:32px">--</div>
     <div class="big-sub">devices tracked</div>
@@ -344,7 +371,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- WEATHER -->
-  <div class="panel col1">
+  <div class="panel col1" data-id="weather">
+    <div class="panel-expand-btn" data-expand="weather"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">Weather</div>
     <div class="temp-wrap">
       <div class="temp-big" id="weather-temp" style="font-size:42px">--</div>
@@ -361,14 +389,25 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <!-- GITHUB -->
-  <div class="panel col2">
+  <div class="panel col2" data-id="github">
+    <div class="panel-expand-btn" data-expand="github"><i class="ti ti-arrows-maximize"></i></div>
     <div class="panel-label">GitHub Activity</div>
     <div id="github-activity"><div class="loading">loading...</div></div>
   </div>
 
 </div>
 </div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal-box">
+    <div class="modal-close" id="modal-close"><i class="ti ti-x"></i></div>
+    <div class="modal-title" id="modal-title">--</div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
 <div class="refresh-dot" id="refresh-dot">● LIVE</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.1.0/iconfont/tabler-icons.min.css"></script>
 
 <script>
 const API = '/api/stats';
@@ -578,28 +617,6 @@ function render(data) {
     tsEl.innerHTML = '<div class="error-text">tailscale unavailable</div>';
   }
 
-  // Uptime Kuma
-  const kuma = data.uptime_kuma;
-  if (kuma && kuma.available) {
-    set('kuma-up', kuma.up !== undefined ? kuma.up : '--');
-    set('kuma-down', kuma.down !== undefined ? kuma.down : '--');
-    const kumaDetail = document.getElementById('kuma-detail');
-    if (kuma.monitors && kuma.monitors.length) {
-      kumaDetail.innerHTML = kuma.monitors.map(m => `
-        <div class="ts-device">
-          <div class="dot ${m.up ? 'up' : 'down'}"></div>
-          <span class="ts-name">${m.id}</span>
-        </div>
-      `).join('');
-    } else {
-      kumaDetail.innerHTML = '<div class="error-text">no monitor detail available</div>';
-    }
-  } else {
-    set('kuma-up', 'N/A');
-    set('kuma-down', 'N/A');
-    document.getElementById('kuma-detail').innerHTML = '<div class="error-text">uptime kuma unavailable</div>';
-  }
-
   // NetAlertX
   const nax = data.netalertx;
   set('netalertx-count', nax && nax.available ? nax.count : 'N/A');
@@ -706,6 +723,148 @@ setInterval(updateClock, 1000);
 updateClock();
 fetchAndRender();
 setInterval(fetchAndRender, 10000);
+
+/* ============ DRAG-AND-DROP REORDERING ============ */
+const dashGrid = document.getElementById('dashboard-grid');
+let draggedEl = null;
+
+function getPanels() {
+  return Array.from(dashGrid.querySelectorAll('.panel'));
+}
+
+function applyLayoutOrder(order) {
+  if (!order || !order.length) return;
+  const panels = getPanels();
+  const byId = {};
+  panels.forEach(p => byId[p.dataset.id] = p);
+  order.forEach(id => {
+    if (byId[id]) dashGrid.appendChild(byId[id]);
+  });
+}
+
+async function loadLayout() {
+  try {
+    const res = await fetch('/api/layout');
+    const layout = await res.json();
+    if (layout && layout.order) applyLayoutOrder(layout.order);
+  } catch (e) {
+    console.warn('layout load failed', e);
+  }
+}
+
+let saveTimer = null;
+function saveLayoutDebounced() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const order = getPanels().map(p => p.dataset.id);
+    fetch('/api/layout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order }),
+    }).catch(() => {});
+  }, 400);
+}
+
+getPanels().forEach(panel => {
+  panel.setAttribute('draggable', 'true');
+
+  panel.addEventListener('dragstart', (e) => {
+    draggedEl = panel;
+    panel.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  panel.addEventListener('dragend', () => {
+    panel.classList.remove('dragging');
+    getPanels().forEach(p => p.classList.remove('drag-over'));
+    saveLayoutDebounced();
+  });
+
+  panel.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (panel === draggedEl) return;
+    panel.classList.add('drag-over');
+  });
+
+  panel.addEventListener('dragleave', () => {
+    panel.classList.remove('drag-over');
+  });
+
+  panel.addEventListener('drop', (e) => {
+    e.preventDefault();
+    panel.classList.remove('drag-over');
+    if (!draggedEl || draggedEl === panel) return;
+    const panels = getPanels();
+    const draggedIndex = panels.indexOf(draggedEl);
+    const targetIndex = panels.indexOf(panel);
+    if (draggedIndex < targetIndex) {
+      panel.after(draggedEl);
+    } else {
+      panel.before(draggedEl);
+    }
+  });
+});
+
+loadLayout();
+
+/* ============ EXPAND TO MODAL ============ */
+const modalBackdrop = document.getElementById('modal-backdrop');
+const modalTitle = document.getElementById('modal-title');
+const modalBody = document.getElementById('modal-body');
+const modalClose = document.getElementById('modal-close');
+
+const MODAL_LABELS = {
+  cpu: 'CPU & load detail',
+  memory: 'Memory detail',
+  temperature: 'Temperature detail',
+  uptime: 'System uptime detail',
+  services: 'Service status detail',
+  docker: 'Docker container detail',
+  adguard: 'AdGuard Home full report',
+  disk: 'Disk usage detail',
+  tailscale: 'Tailscale network detail',
+  network: 'Network interface detail',
+  sysinfo: 'System info detail',
+  netalertx: 'NetAlertX device detail',
+  weather: 'Weather detail',
+  github: 'GitHub activity detail',
+};
+
+function openModal(panelId) {
+  const panel = dashGrid.querySelector(`[data-id="${panelId}"]`);
+  if (!panel) return;
+  modalTitle.textContent = MODAL_LABELS[panelId] || panelId;
+  const clone = panel.cloneNode(true);
+  clone.querySelectorAll('.panel-expand-btn').forEach(b => b.remove());
+  clone.classList.remove('panel', 'col1', 'col2', 'col3', 'col4', 'col5', 'col6');
+  clone.removeAttribute('draggable');
+  clone.removeAttribute('style');
+  modalBody.innerHTML = '';
+  modalBody.appendChild(clone);
+  modalBackdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  modalBackdrop.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+dashGrid.addEventListener('click', (e) => {
+  const btn = e.target.closest('.panel-expand-btn');
+  if (btn) {
+    e.stopPropagation();
+    openModal(btn.dataset.expand);
+  }
+});
+
+modalClose.addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
 </script>
 </body>
 </html>
