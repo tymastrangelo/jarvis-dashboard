@@ -99,7 +99,7 @@ async function getSystemStats() {
     cpuUsage, memRaw, uptimeRaw, tempRaw,
     diskRaw, loadRaw, processesRaw,
     networkRaw, hostnameRaw,
-    osRaw, kernelRaw, swapRaw
+    osRaw, kernelRaw, swapRaw, cloudflaredStatus
   ] = await Promise.all([
     getCpuUsage(),
     run("free -b | awk 'NR==2{print $2,$3,$4}'"),
@@ -113,6 +113,7 @@ async function getSystemStats() {
     run("cat /host/etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d'\"' -f2 || echo 'Ubuntu 24.04'"),
     run("uname -r"),
     run("free -b | awk 'NR==3{print $2,$3,$4}'"),
+    run("pgrep -x cloudflared > /dev/null && echo running || echo stopped"),
   ]);
 
   const dockerContainers = await getDockerViaSocket();
@@ -160,6 +161,7 @@ async function getSystemStats() {
     network: { rx_bytes: netRx || 0, tx_bytes: netTx || 0 },
     processes: parseInt(processesRaw) - 1 || 0,
     docker: dockerContainers,
+    cloudflared_running: cloudflaredStatus === 'running',
   };
 }
 

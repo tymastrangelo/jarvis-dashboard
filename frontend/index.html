@@ -348,7 +348,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 const API = '/api/stats';
 const SERVICES = [
   { name: 'AdGuard', key: 'adguardhome', check: d => d.adguard && d.adguard.running },
-  { name: 'Cloudflared', key: 'cloudflared', check: d => checkDocker(d, 'cloudflared') || checkService('cloudflared') },
+  { name: 'Cloudflared', key: 'cloudflared', check: d => d.system && d.system.cloudflared_running },
   { name: 'Tailscale', key: 'tailscale', check: d => d.tailscale && d.tailscale.backend_state === 'Running' },
   { name: 'Uptime Kuma', key: 'uptime-kuma', check: d => checkDocker(d, 'uptime-kuma') },
   { name: 'Dockge', key: 'dockge', check: d => checkDocker(d, 'dockge') },
