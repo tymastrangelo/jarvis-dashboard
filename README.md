@@ -35,3 +35,4 @@ This pulls the latest from git and recreates the containers.
 - CPU usage is calculated from two `/proc/stat` samples 10 seconds apart (not `top`, which behaves inconsistently across distros)
 # Auto-deploy test Mon Jun 29 23:21:16 EDT 2026
 # Test 2
+# Test 3
