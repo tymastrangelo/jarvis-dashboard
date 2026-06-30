@@ -8,6 +8,9 @@ const ADGUARD_PASS = process.env.ADGUARD_PASS || '';
 const KUMA_URL = process.env.KUMA_URL || 'http://localhost:3001';
 const KUMA_API_KEY = process.env.KUMA_API_KEY || '';
 const NETALERTX_URL = process.env.NETALERTX_URL || 'http://localhost:20211';
+const GITHUB_USERNAME = process.env.GITHUB_USERNAME || 'tymastrangelo';
+const WEATHER_LAT = process.env.WEATHER_LAT || '25.9408';
+const WEATHER_LON = process.env.WEATHER_LON || '-81.7187';
 const PORT = process.env.PORT || 4000;
 
 function run(cmd) {
@@ -107,6 +110,46 @@ async function getNetAlertXDevices() {
   if (isNaN(total)) return { available: false, count: null, error: raw.slice(0, 150) };
   const online = parseInt(parts[1]);
   return { available: true, count: total, online: isNaN(online) ? null : online };
+}
+
+async function getGithubActivity() {
+  const data = await fetchJson('https://api.github.com/users/tymastrangelo/events/public', {
+    'User-Agent': 'jarvis-dashboard',
+  });
+  if (!Array.isArray(data)) return { available: false, events: [] };
+
+  const events = data.slice(0, 8).map(e => {
+    let summary = '';
+    const repo = e.repo ? e.repo.name.split('/')[1] : 'unknown';
+    switch (e.type) {
+      case 'PushEvent':
+        const commitCount = e.payload && e.payload.commits ? e.payload.commits.length : 0;
+        summary = `pushed ${commitCount} commit${commitCount !== 1 ? 's' : ''}`;
+        break;
+      case 'CreateEvent':
+        summary = `created ${e.payload ? e.payload.ref_type : 'repo'}`;
+        break;
+      case 'PullRequestEvent':
+        summary = `${e.payload ? e.payload.action : 'updated'} PR`;
+        break;
+      case 'IssuesEvent':
+        summary = `${e.payload ? e.payload.action : 'updated'} issue`;
+        break;
+      case 'WatchEvent':
+        summary = 'starred';
+        break;
+      case 'ForkEvent':
+        summary = 'forked';
+        break;
+      case 'DeleteEvent':
+        summary = `deleted ${e.payload ? e.payload.ref_type : 'branch'}`;
+        break;
+      default:
+        summary = e.type.replace('Event', '').toLowerCase();
+    }
+    return { repo, summary, created_at: e.created_at };
+  });
+  return { available: true, events };
 }
 
 async function getSystemStats() {
@@ -302,13 +345,14 @@ async function getDockerDetails() {
 }
 
 async function getStats() {
-  const [system, adguard, tailscale, dockerDetails, uptimeKuma, netalertx] = await Promise.all([
+  const [system, adguard, tailscale, dockerDetails, uptimeKuma, netalertx, github] = await Promise.all([
     getSystemStats(),
     getAdguardStats(),
     getTailscaleStatus(),
     getDockerDetails(),
     getUptimeKumaStatus(),
     getNetAlertXDevices(),
+    getGithubActivity(),
   ]);
   return {
     timestamp: new Date().toISOString(),
@@ -318,6 +362,7 @@ async function getStats() {
     docker_details: dockerDetails,
     uptime_kuma: uptimeKuma,
     netalertx,
+    github,
   };
 }
 

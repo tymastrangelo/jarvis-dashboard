@@ -343,6 +343,29 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
   </div>
 
+  <!-- WEATHER -->
+  <div class="panel col1">
+    <div class="panel-label">Weather</div>
+    <div class="temp-wrap">
+      <div class="temp-big" id="weather-temp" style="font-size:42px">--</div>
+      <div class="temp-right">
+        <div class="temp-deg">°F</div>
+      </div>
+    </div>
+    <div class="big-sub" id="weather-location" style="margin-top:4px">locating...</div>
+    <div style="margin-top:10px">
+      <div class="sysinfo-row"><span class="si-key">Condition</span><span class="si-val" id="weather-condition">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Wind</span><span class="si-val" id="weather-wind">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Humidity</span><span class="si-val" id="weather-humidity">--</span></div>
+    </div>
+  </div>
+
+  <!-- GITHUB -->
+  <div class="panel col2">
+    <div class="panel-label">GitHub Activity</div>
+    <div id="github-activity"><div class="loading">loading...</div></div>
+  </div>
+
 </div>
 </div>
 <div class="refresh-dot" id="refresh-dot">● LIVE</div>
@@ -582,6 +605,24 @@ function render(data) {
   set('netalertx-count', nax && nax.available ? nax.count : 'N/A');
   set('netalertx-online', nax && nax.available && nax.online !== null ? nax.online : '--');
 
+  // GitHub
+  const gh = data.github;
+  const ghEl = document.getElementById('github-activity');
+  if (gh && gh.available && gh.events.length) {
+    ghEl.innerHTML = gh.events.map(e => {
+      const date = new Date(e.created_at);
+      const ago = timeAgo(date);
+      return `
+        <div class="device-row">
+          <span class="device-name" style="font-size:12px"><span style="color:#38bdf8">${e.repo}</span> — ${e.summary}</span>
+          <span class="device-ip" style="font-size:10px">${ago}</span>
+        </div>
+      `;
+    }).join('');
+  } else {
+    ghEl.innerHTML = '<div class="error-text">no recent activity</div>';
+  }
+
   // Last updated
   const t = new Date(data.timestamp);
   set('last-updated', t.toTimeString().slice(0,8));
@@ -604,6 +645,62 @@ async function fetchAndRender() {
     console.error('fetch error:', e);
   }
 }
+
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return seconds + 's ago';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return minutes + 'm ago';
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  return days + 'd ago';
+}
+
+const WEATHER_CODES = {
+  0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+  45: 'Fog', 48: 'Depositing fog',
+  51: 'Light drizzle', 53: 'Drizzle', 55: 'Dense drizzle',
+  61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
+  71: 'Light snow', 73: 'Snow', 75: 'Heavy snow',
+  80: 'Rain showers', 81: 'Rain showers', 82: 'Violent rain showers',
+  95: 'Thunderstorm', 96: 'Thunderstorm w/ hail', 99: 'Thunderstorm w/ hail',
+};
+
+async function fetchWeatherFor(lat, lon, locationLabel) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const c = data.current;
+    set('weather-temp', Math.round(c.temperature_2m));
+    set('weather-location', locationLabel);
+    set('weather-condition', WEATHER_CODES[c.weather_code] || '--');
+    set('weather-wind', Math.round(c.wind_speed_10m) + ' mph');
+    set('weather-humidity', Math.round(c.relative_humidity_2m) + '%');
+  } catch (e) {
+    set('weather-location', 'unavailable');
+  }
+}
+
+function initWeather() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        fetchWeatherFor(pos.coords.latitude, pos.coords.longitude, 'your location');
+      },
+      () => {
+        fetchWeatherFor(36.1010, -79.5044, 'Elon, NC');
+      },
+      { timeout: 5000 }
+    );
+  } else {
+    fetchWeatherFor(36.1010, -79.5044, 'Elon, NC');
+  }
+}
+
+initWeather();
+setInterval(initWeather, 10 * 60 * 1000);
 
 setInterval(updateClock, 1000);
 updateClock();
