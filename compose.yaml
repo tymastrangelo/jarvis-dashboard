@@ -46,7 +46,7 @@ services:
       - ./webhook:/app
       - /opt/stacks/jarvis:/opt/stacks/jarvis
       - /var/run/docker.sock:/var/run/docker.sock
-    command: sh -c "apk add --no-cache docker-cli docker-cli-compose git && node listener.js"
+    command: sh -c "apk add --no-cache docker-cli docker-cli-compose git > /dev/null 2>&1 && git config --global --add safe.directory /opt/stacks/jarvis && node listener.js"
     environment:
       - WEBHOOK_PORT=9000
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
