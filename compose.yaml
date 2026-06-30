@@ -1,0 +1,33 @@
+services:
+  jarvis-backend:
+    image: node:20-alpine
+    container_name: jarvis-backend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /usr/bin/tailscale:/usr/bin/tailscale:ro
+      - /var/run/tailscale:/var/run/tailscale:ro
+      - /etc/os-release:/host/etc/os-release:ro
+    command: node server.js
+    environment:
+      - PORT=4000
+      - ADGUARD_URL=http://192.168.1.49:3000
+      - ADGUARD_USER=admin
+      - ADGUARD_PASS=${ADGUARD_PASS:-}
+    network_mode: host
+    pid: host
+
+  jarvis-frontend:
+    image: nginx:alpine
+    container_name: jarvis-frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    network_mode: host
+    depends_on:
+      - jarvis-backend

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S · Home Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:#020d18;color:#7dd3fc;font-family:'Rajdhani',sans-serif;overflow-x:hidden}
+body{padding:14px;position:relative}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(14,165,233,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(14,165,233,0.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.scan-line{position:fixed;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(56,189,248,0.08),transparent);animation:scan 8s linear infinite;pointer-events:none;z-index:1}
+@keyframes scan{0%{top:-2px}100%{top:100vh}}
+.content{position:relative;z-index:2}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(14,165,233,0.2);padding-bottom:12px;margin-bottom:14px}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{font-family:'Share Tech Mono',monospace;font-size:20px;color:#38bdf8;letter-spacing:8px}
+.status-pill{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:10px;color:#22c55e;letter-spacing:2px}
+.pulse{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.header-right{text-align:right;font-family:'Share Tech Mono',monospace;font-size:11px;color:#38bdf8;line-height:1.8}
+.header-right .time{font-size:18px;color:#e0f2fe}
+.header-right .sub{opacity:0.45;font-size:10px}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}
+.col1{grid-column:span 3}
+.col2{grid-column:span 4}
+.col3{grid-column:span 5}
+.col4{grid-column:span 6}
+.col5{grid-column:span 8}
+.col6{grid-column:span 12}
+
+/* PANEL */
+.panel{border:1px solid rgba(14,165,233,0.2);background:rgba(3,16,28,0.85);padding:13px;position:relative}
+.panel::before{content:'';position:absolute;top:0;left:0;width:16px;height:16px;border-top:2px solid #0ea5e9;border-left:2px solid #0ea5e9}
+.panel::after{content:'';position:absolute;bottom:0;right:0;width:16px;height:16px;border-bottom:2px solid #0ea5e9;border-right:2px solid #0ea5e9}
+.panel-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:#0ea5e9;letter-spacing:3px;text-transform:uppercase;margin-bottom:11px;opacity:0.65}
+
+/* GAUGES */
+.gauge-row{display:flex;flex-direction:column;gap:9px}
+.gauge-item{display:flex;flex-direction:column;gap:3px}
+.gauge-header{display:flex;justify-content:space-between}
+.g-name{font-size:11px;color:#7dd3fc;letter-spacing:1px;text-transform:uppercase}
+.g-val{font-family:'Share Tech Mono',monospace;font-size:12px;color:#e0f2fe}
+.track{height:3px;background:rgba(14,165,233,0.1);overflow:hidden}
+.fill{height:100%;transition:width 1.2s ease;background:linear-gradient(90deg,#0369a1,#38bdf8)}
+.fill.warn{background:linear-gradient(90deg,#b45309,#fbbf24)}
+.fill.danger{background:linear-gradient(90deg,#991b1b,#f87171)}
+
+/* BIG NUMBERS */
+.big-num{font-family:'Share Tech Mono',monospace;font-size:42px;color:#e0f2fe;line-height:1}
+.big-unit{font-size:13px;color:#38bdf8;margin-top:3px}
+.big-sub{font-size:10px;color:#7dd3fc;opacity:0.5;margin-top:4px;letter-spacing:1px;text-transform:uppercase}
+
+/* SERVICES */
+.service-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.svc{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(14,165,233,0.12);background:rgba(14,165,233,0.025)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot.up{background:#22c55e}
+.dot.down{background:#ef4444}
+.dot.warn{background:#f59e0b}
+.svc-name{font-size:11px;color:#e0f2fe;flex:1;letter-spacing:.5px}
+.svc-badge{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px}
+.svc-badge.up{color:#22c55e}
+.svc-badge.down{color:#ef4444}
+.svc-badge.warn{color:#f59e0b}
+
+/* DOCKER */
+.docker-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px}
+.docker-table th{font-family:'Share Tech Mono',monospace;font-size:9px;color:#0ea5e9;letter-spacing:2px;text-align:left;padding:4px 6px;border-bottom:1px solid rgba(14,165,233,0.15);font-weight:400;opacity:.6}
+.docker-table td{padding:5px 6px;border-bottom:1px solid rgba(14,165,233,0.07);color:#e0f2fe;font-family:'Share Tech Mono',monospace;font-size:10px}
+.docker-table tr:last-child td{border-bottom:none}
+.docker-table td:first-child{color:#38bdf8}
+
+/* ADGUARD */
+.ag-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.ag-card{padding:8px 10px;border:1px solid rgba(14,165,233,0.12);background:rgba(14,165,233,0.025)}
+.ag-val{font-family:'Share Tech Mono',monospace;font-size:19px;color:#38bdf8}
+.ag-label{font-size:9px;color:#7dd3fc;letter-spacing:1px;text-transform:uppercase;margin-top:1px;opacity:.6}
+
+/* TAILSCALE */
+.ts-device{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(14,165,233,0.07)}
+.ts-device:last-child{border-bottom:none}
+.ts-name{font-size:12px;color:#e0f2fe;flex:1}
+.ts-ip{font-family:'Share Tech Mono',monospace;font-size:10px;color:#38bdf8;opacity:.7}
+.ts-os{font-size:9px;color:#7dd3fc;opacity:.45;margin-left:4px}
+
+/* TOP LISTS */
+.top-list{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.top-item{display:flex;align-items:center;gap:6px;font-size:10px}
+.top-rank{font-family:'Share Tech Mono',monospace;color:#0ea5e9;opacity:.5;width:14px;flex-shrink:0}
+.top-name{color:#7dd3fc;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-count{font-family:'Share Tech Mono',monospace;color:#38bdf8;font-size:9px}
+
+/* DISK */
+.disk-item{display:flex;align-items:center;gap:8px;margin-top:8px}
+.disk-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:#7dd3fc;width:32px;flex-shrink:0}
+.disk-track{flex:1;height:5px;background:rgba(14,165,233,0.1)}
+.disk-fill{height:100%;background:linear-gradient(90deg,#0ea5e9,#7dd3fc);transition:width 1.2s ease}
+.disk-pct{font-family:'Share Tech Mono',monospace;font-size:10px;color:#38bdf8;width:30px;text-align:right}
+
+/* UPTIME */
+.uptime-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.uptime-part{text-align:center;padding:8px 4px;border:1px solid rgba(14,165,233,0.15);background:rgba(14,165,233,0.025)}
+.uptime-num{font-family:'Share Tech Mono',monospace;font-size:22px;color:#e0f2fe}
+.uptime-label{font-size:9px;color:#7dd3fc;opacity:.5;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* TEMP */
+.temp-wrap{display:flex;align-items:flex-end;gap:6px;margin-top:4px}
+.temp-big{font-family:'Share Tech Mono',monospace;font-size:52px;color:#e0f2fe;line-height:1}
+.temp-right{display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:6px}
+.temp-deg{font-size:18px;color:#38bdf8}
+.temp-status{font-size:10px;letter-spacing:2px;margin-top:4px}
+.temp-status.ok{color:#22c55e}
+.temp-status.warm{color:#f59e0b}
+.temp-status.hot{color:#ef4444}
+.temp-bar-wrap{margin-top:8px}
+.temp-scale{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:9px;color:#38bdf8;opacity:.4;margin-top:3px}
+
+/* NETWORK */
+.net-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.net-card{padding:8px 10px;border:1px solid rgba(14,165,233,0.12)}
+.net-val{font-family:'Share Tech Mono',monospace;font-size:16px;color:#38bdf8}
+.net-label{font-size:9px;color:#7dd3fc;opacity:.55;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* SYSINFO */
+.sysinfo-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(14,165,233,0.06);font-size:11px}
+.sysinfo-row:last-child{border-bottom:none}
+.si-key{color:#7dd3fc;opacity:.55;letter-spacing:.5px}
+.si-val{font-family:'Share Tech Mono',monospace;color:#e0f2fe;font-size:10px}
+
+/* LOAD */
+.load-bars{display:flex;align-items:flex-end;justify-content:space-around;height:40px;margin-top:8px;gap:4px}
+.load-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.load-bar-track{width:100%;background:rgba(14,165,233,0.1);flex:1;display:flex;align-items:flex-end}
+.load-bar-fill{width:100%;background:linear-gradient(0deg,#0369a1,#38bdf8);transition:height 1.2s ease}
+.load-bar-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:#38bdf8;opacity:.5}
+
+/* ERROR / LOADING */
+.loading{font-family:'Share Tech Mono',monospace;font-size:11px;color:#38bdf8;opacity:.4;letter-spacing:2px;text-transform:uppercase}
+.error-text{font-family:'Share Tech Mono',monospace;font-size:10px;color:#ef4444;opacity:.6}
+
+/* REFRESH INDICATOR */
+.refresh-dot{position:fixed;bottom:12px;right:14px;font-family:'Share Tech Mono',monospace;font-size:9px;color:#38bdf8;opacity:.3;letter-spacing:1px;z-index:10}
+</style>
+</head>
+<body>
+<div class="scan-line"></div>
+<div class="content">
+
+<div class="header">
+  <div class="header-left">
+    <div class="status-pill"><div class="pulse"></div><span id="conn-status">CONNECTING</span></div>
+    <div class="logo">J.A.R.V.I.S</div>
+  </div>
+  <div class="header-right">
+    <div class="time" id="clock">--:--:--</div>
+    <div id="hostname-line" class="sub">macmini · loading...</div>
+    <div id="date-line" class="sub"></div>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- CPU / LOAD -->
+  <div class="panel col1">
+    <div class="panel-label">CPU & Load</div>
+    <div class="gauge-row">
+      <div class="gauge-item">
+        <div class="gauge-header"><span class="g-name">Usage</span><span class="g-val" id="cpu-pct">--%</span></div>
+        <div class="track"><div class="fill" id="cpu-bar" style="width:0%"></div></div>
+      </div>
+      <div class="gauge-item">
+        <div class="gauge-header"><span class="g-name">Load 1m</span><span class="g-val" id="load1">--</span></div>
+        <div class="track"><div class="fill" id="load1-bar" style="width:0%"></div></div>
+      </div>
+      <div class="gauge-item">
+        <div class="gauge-header"><span class="g-name">Load 5m</span><span class="g-val" id="load5">--</span></div>
+        <div class="track"><div class="fill" id="load5-bar" style="width:0%"></div></div>
+      </div>
+      <div class="gauge-item">
+        <div class="gauge-header"><span class="g-name">Load 15m</span><span class="g-val" id="load15">--</span></div>
+        <div class="track"><div class="fill" id="load15-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="sysinfo-row"><span class="si-key">Processes</span><span class="si-val" id="procs">--</span></div>
+    </div>
+  </div>
+
+  <!-- MEMORY -->
+  <div class="panel col1">
+    <div class="panel-label">Memory</div>
+    <div class="gauge-row">
+      <div class="gauge-item">
+        <div class="gauge-header"><span class="g-name">RAM</span><span class="g-val" id="mem-pct">--%</span></div>
+        <div class="track"><div class="fill" id="mem-bar" style="width:0%"></div></div>
+      </div>
+      <div class="gauge-item">
+        <div class="gauge-header"><span class="g-name">Swap</span><span class="g-val" id="swap-pct">--%</span></div>
+        <div class="track"><div class="fill" id="swap-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="sysinfo-row"><span class="si-key">Total RAM</span><span class="si-val" id="mem-total">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Used</span><span class="si-val" id="mem-used">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Free</span><span class="si-val" id="mem-free">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Swap Used</span><span class="si-val" id="swap-used">--</span></div>
+    </div>
+  </div>
+
+  <!-- TEMPERATURE -->
+  <div class="panel col1">
+    <div class="panel-label">Temperature</div>
+    <div class="temp-wrap">
+      <div class="temp-big" id="temp-val">--</div>
+      <div class="temp-right">
+        <div class="temp-deg">°C</div>
+        <div class="temp-status ok" id="temp-status">--</div>
+      </div>
+    </div>
+    <div class="temp-bar-wrap">
+      <div class="track" style="height:5px"><div class="fill" id="temp-bar" style="width:0%"></div></div>
+      <div class="temp-scale"><span>0°</span><span>50°</span><span>100°</span></div>
+    </div>
+  </div>
+
+  <!-- UPTIME -->
+  <div class="panel col1">
+    <div class="panel-label">Uptime</div>
+    <div class="uptime-grid">
+      <div class="uptime-part"><div class="uptime-num" id="up-days">--</div><div class="uptime-label">days</div></div>
+      <div class="uptime-part"><div class="uptime-num" id="up-hours">--</div><div class="uptime-label">hours</div></div>
+      <div class="uptime-part"><div class="uptime-num" id="up-mins">--</div><div class="uptime-label">mins</div></div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="sysinfo-row"><span class="si-key">Hostname</span><span class="si-val" id="hostname-val">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">OS</span><span class="si-val" id="os-val">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Kernel</span><span class="si-val" id="kernel-val">--</span></div>
+    </div>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="panel col2">
+    <div class="panel-label">Services</div>
+    <div class="service-grid" id="services-grid">
+      <div class="loading">scanning...</div>
+    </div>
+  </div>
+
+  <!-- DOCKER CONTAINERS -->
+  <div class="panel col2">
+    <div class="panel-label">Docker Containers</div>
+    <table class="docker-table">
+      <thead><tr><th>Container</th><th>CPU</th><th>Memory</th><th>Net I/O</th></tr></thead>
+      <tbody id="docker-tbody"><tr><td colspan="4" class="loading" style="text-align:center">loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- ADGUARD STATS -->
+  <div class="panel col2">
+    <div class="panel-label">AdGuard Home · DNS</div>
+    <div class="ag-grid">
+      <div class="ag-card"><div class="ag-val" id="ag-queries">--</div><div class="ag-label">Queries (24h)</div></div>
+      <div class="ag-card"><div class="ag-val" id="ag-blocked">--</div><div class="ag-label">Blocked</div></div>
+      <div class="ag-card"><div class="ag-val" id="ag-pct">--%</div><div class="ag-label">Block Rate</div></div>
+      <div class="ag-card"><div class="ag-val" id="ag-latency">--ms</div><div class="ag-label">Avg Latency</div></div>
+    </div>
+    <div class="panel-label" style="margin-top:10px;margin-bottom:6px">Top Blocked Domains</div>
+    <div class="top-list" id="ag-top-blocked"><div class="loading">loading...</div></div>
+  </div>
+
+  <!-- DISK -->
+  <div class="panel col1">
+    <div class="panel-label">Disk</div>
+    <div id="disk-section">
+      <div class="disk-item">
+        <span class="disk-label">root</span>
+        <div class="disk-track"><div class="disk-fill" id="disk-fill-root" style="width:0%"></div></div>
+        <span class="disk-pct" id="disk-pct-root">--%</span>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="sysinfo-row"><span class="si-key">Total</span><span class="si-val" id="disk-total">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Used</span><span class="si-val" id="disk-used">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Free</span><span class="si-val" id="disk-free">--</span></div>
+    </div>
+  </div>
+
+  <!-- TAILSCALE -->
+  <div class="panel col2">
+    <div class="panel-label">Tailscale Network</div>
+    <div id="ts-devices"><div class="loading">loading...</div></div>
+  </div>
+
+  <!-- NETWORK -->
+  <div class="panel col2">
+    <div class="panel-label">Network · Interface</div>
+    <div class="net-stats">
+      <div class="net-card"><div class="net-val" id="net-rx">--</div><div class="net-label">Total RX</div></div>
+      <div class="net-card"><div class="net-val" id="net-tx">--</div><div class="net-label">Total TX</div></div>
+    </div>
+    <div style="margin-top:10px">
+      <div class="panel-label" style="margin-bottom:6px">Top Clients (AdGuard)</div>
+      <div class="top-list" id="ag-top-clients"><div class="loading">loading...</div></div>
+    </div>
+  </div>
+
+  <!-- ADGUARD STATUS -->
+  <div class="panel col2">
+    <div class="panel-label">System Info</div>
+    <div id="sysinfo-section">
+      <div class="sysinfo-row"><span class="si-key">AdGuard</span><span class="si-val" id="ag-version">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Tailscale</span><span class="si-val" id="ts-state">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Last Updated</span><span class="si-val" id="last-updated">--</span></div>
+      <div class="sysinfo-row"><span class="si-key">Local IP</span><span class="si-val">192.168.1.49</span></div>
+      <div class="sysinfo-row"><span class="si-key">Tailscale IP</span><span class="si-val">100.69.206.67</span></div>
+    </div>
+  </div>
+
+</div>
+</div>
+<div class="refresh-dot" id="refresh-dot">● LIVE</div>
+
+<script>
+const API = '/api/stats';
+const SERVICES = [
+  { name: 'AdGuard', key: 'adguardhome', check: d => d.adguard && d.adguard.running },
+  { name: 'Cloudflared', key: 'cloudflared', check: d => checkDocker(d, 'cloudflared') || checkService('cloudflared') },
+  { name: 'Tailscale', key: 'tailscale', check: d => d.tailscale && d.tailscale.backend_state === 'Running' },
+  { name: 'Uptime Kuma', key: 'uptime-kuma', check: d => checkDocker(d, 'uptime-kuma') },
+  { name: 'Dockge', key: 'dockge', check: d => checkDocker(d, 'dockge') },
+  { name: 'NetAlertX', key: 'netalertx', check: d => checkDocker(d, 'netalertx') },
+];
+
+function checkDocker(d, name) {
+  if (!d.system || !d.system.docker) return null;
+  const c = d.system.docker.find(c => c.name && c.name.toLowerCase().includes(name.toLowerCase()));
+  return c ? c.up : null;
+}
+
+function fmtBytes(b) {
+  if (!b && b !== 0) return '--';
+  if (b > 1e12) return (b / 1e12).toFixed(1) + ' TB';
+  if (b > 1e9) return (b / 1e9).toFixed(1) + ' GB';
+  if (b > 1e6) return (b / 1e6).toFixed(1) + ' MB';
+  if (b > 1e3) return (b / 1e3).toFixed(1) + ' KB';
+  return b + ' B';
+}
+
+function fmtNum(n) {
+  if (n === null || n === undefined) return '--';
+  return n.toLocaleString();
+}
+
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function setWidth(id, pct) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+}
+
+function setClass(id, cls) {
+  const el = document.getElementById(id);
+  if (el) { el.className = el.className.replace(/\b(up|down|warn|ok|hot|danger)\b/g, ''); el.classList.add(cls); }
+}
+
+function updateClock() {
+  const now = new Date();
+  set('clock', now.toTimeString().slice(0,8));
+  set('date-line', now.toDateString());
+}
+
+function render(data) {
+  const sys = data.system;
+  const ag = data.adguard;
+  const ts = data.tailscale;
+  const dd = data.docker_details || [];
+
+  set('conn-status', 'ONLINE');
+  document.querySelector('.status-pill').style.color = '#22c55e';
+  document.querySelector('.pulse').style.background = '#22c55e';
+
+  // System
+  set('hostname-val', sys.hostname);
+  set('hostname-line', sys.hostname + ' · ' + (sys.os || ''));
+  set('os-val', (sys.os || '').replace('Ubuntu ', 'Ubuntu '));
+  set('kernel-val', (sys.kernel || '').slice(0,20));
+  set('procs', sys.processes || '--');
+
+  // CPU
+  const cpu = Math.round(sys.cpu.usage);
+  set('cpu-pct', cpu + '%');
+  setWidth('cpu-bar', cpu);
+  document.getElementById('cpu-bar').className = 'fill' + (cpu > 80 ? ' danger' : cpu > 60 ? ' warn' : '');
+
+  const load1 = sys.cpu.load1.toFixed(2);
+  const load5 = sys.cpu.load5.toFixed(2);
+  const load15 = sys.cpu.load15.toFixed(2);
+  set('load1', load1); setWidth('load1-bar', sys.cpu.load1 * 25);
+  set('load5', load5); setWidth('load5-bar', sys.cpu.load5 * 25);
+  set('load15', load15); setWidth('load15-bar', sys.cpu.load15 * 25);
+
+  // Memory
+  set('mem-pct', sys.memory.pct + '%');
+  setWidth('mem-bar', sys.memory.pct);
+  document.getElementById('mem-bar').className = 'fill' + (sys.memory.pct > 85 ? ' danger' : sys.memory.pct > 65 ? ' warn' : '');
+  set('mem-total', fmtBytes(sys.memory.total));
+  set('mem-used', fmtBytes(sys.memory.used));
+  set('mem-free', fmtBytes(sys.memory.free));
+  set('swap-pct', sys.swap.pct + '%');
+  setWidth('swap-bar', sys.swap.pct);
+  set('swap-used', fmtBytes(sys.swap.used));
+
+  // Temp
+  if (sys.temperature !== null) {
+    set('temp-val', sys.temperature);
+    setWidth('temp-bar', (sys.temperature / 100) * 100);
+    const tStatus = sys.temperature >= 85 ? 'CRITICAL' : sys.temperature >= 70 ? 'WARM' : 'NOMINAL';
+    const tClass = sys.temperature >= 85 ? 'hot' : sys.temperature >= 70 ? 'warm' : 'ok';
+    set('temp-status', tStatus);
+    document.getElementById('temp-status').className = 'temp-status ' + tClass;
+    document.getElementById('temp-bar').className = 'fill' + (sys.temperature >= 85 ? ' danger' : sys.temperature >= 70 ? ' warn' : '');
+  } else {
+    set('temp-val', 'N/A');
+    set('temp-status', 'NO SENSOR');
+  }
+
+  // Uptime
+  set('up-days', sys.uptime.days);
+  set('up-hours', sys.uptime.hours);
+  set('up-mins', sys.uptime.mins);
+
+  // Disk
+  set('disk-pct-root', sys.disk.pct + '%');
+  setWidth('disk-fill-root', sys.disk.pct);
+  set('disk-total', fmtBytes(sys.disk.total));
+  set('disk-used', fmtBytes(sys.disk.used));
+  set('disk-free', fmtBytes(sys.disk.free));
+
+  // Network
+  set('net-rx', fmtBytes(sys.network.rx_bytes));
+  set('net-tx', fmtBytes(sys.network.tx_bytes));
+
+  // Services
+  const svcsEl = document.getElementById('services-grid');
+  svcsEl.innerHTML = SERVICES.map(s => {
+    let state = checkDocker(data, s.name) || (s.check ? s.check(data) : null);
+    const cls = state === true ? 'up' : state === false ? 'down' : 'warn';
+    const label = state === true ? 'ONLINE' : state === false ? 'OFFLINE' : 'UNKNOWN';
+    return `<div class="svc"><div class="dot ${cls}"></div><span class="svc-name">${s.name}</span><span class="svc-badge ${cls}">${label}</span></div>`;
+  }).join('');
+
+  // Docker containers
+  const tbody = document.getElementById('docker-tbody');
+  if (dd.length) {
+    tbody.innerHTML = dd.map(c => `
+      <tr>
+        <td>${c.name || '--'}</td>
+        <td>${c.cpu || '--'}</td>
+        <td>${(c.mem || '--').split('/')[0].trim()}</td>
+        <td>${c.net || '--'}</td>
+      </tr>
+    `).join('');
+  } else if (sys.docker && sys.docker.length) {
+    tbody.innerHTML = sys.docker.map(c => `
+      <tr>
+        <td>${c.name}</td>
+        <td colspan="3" style="color:${c.up?'#22c55e':'#ef4444'}">${c.status}</td>
+      </tr>
+    `).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="4" class="error-text" style="text-align:center">no containers</td></tr>';
+  }
+
+  // AdGuard
+  if (ag) {
+    set('ag-queries', fmtNum(ag.queries));
+    set('ag-blocked', fmtNum(ag.blocked));
+    set('ag-pct', ag.blocked_pct + '%');
+    set('ag-latency', ag.avg_latency_ms + 'ms');
+    set('ag-version', ag.version ? 'v' + ag.version : 'online');
+
+    const topBlocked = document.getElementById('ag-top-blocked');
+    if (ag.top_blocked && ag.top_blocked.length) {
+      topBlocked.innerHTML = ag.top_blocked.map((d, i) => {
+        const name = Object.keys(d)[0];
+        const count = Object.values(d)[0];
+        return `<div class="top-item"><span class="top-rank">${i+1}</span><span class="top-name">${name}</span><span class="top-count">${fmtNum(count)}</span></div>`;
+      }).join('');
+    } else {
+      topBlocked.innerHTML = '<div class="error-text">no data</div>';
+    }
+
+    const topClients = document.getElementById('ag-top-clients');
+    if (ag.top_clients && ag.top_clients.length) {
+      topClients.innerHTML = ag.top_clients.map((d, i) => {
+        const name = Object.keys(d)[0];
+        const count = Object.values(d)[0];
+        return `<div class="top-item"><span class="top-rank">${i+1}</span><span class="top-name">${name}</span><span class="top-count">${fmtNum(count)}</span></div>`;
+      }).join('');
+    } else {
+      topClients.innerHTML = '<div class="error-text">no data</div>';
+    }
+  } else {
+    ['ag-queries','ag-blocked','ag-pct','ag-latency'].forEach(id => set(id, 'N/A'));
+    document.getElementById('ag-top-blocked').innerHTML = '<div class="error-text">adguard unavailable</div>';
+    document.getElementById('ag-top-clients').innerHTML = '<div class="error-text">adguard unavailable</div>';
+  }
+
+  // Tailscale
+  set('ts-state', ts ? ts.backend_state : 'offline');
+  const tsEl = document.getElementById('ts-devices');
+  if (ts) {
+    const allDevices = [ts.self, ...(ts.peers || [])].filter(Boolean);
+    tsEl.innerHTML = allDevices.map(d => `
+      <div class="ts-device">
+        <div class="dot ${d.online ? 'up' : 'down'}"></div>
+        <span class="ts-name">${d.hostname || '--'}</span>
+        <span class="ts-ip">${d.ip || '--'}</span>
+        <span class="ts-os">${d.os || ''}</span>
+      </div>
+    `).join('');
+  } else {
+    tsEl.innerHTML = '<div class="error-text">tailscale unavailable</div>';
+  }
+
+  // Last updated
+  const t = new Date(data.timestamp);
+  set('last-updated', t.toTimeString().slice(0,8));
+}
+
+async function fetchAndRender() {
+  try {
+    const r = await fetch(API);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    render(data);
+    document.getElementById('refresh-dot').textContent = '● LIVE';
+    document.getElementById('refresh-dot').style.color = '#22c55e';
+  } catch (e) {
+    set('conn-status', 'OFFLINE');
+    document.querySelector('.status-pill').style.color = '#ef4444';
+    document.querySelector('.pulse').style.background = '#ef4444';
+    document.getElementById('refresh-dot').textContent = '● ERROR';
+    document.getElementById('refresh-dot').style.color = '#ef4444';
+    console.error('fetch error:', e);
+  }
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+fetchAndRender();
+setInterval(fetchAndRender, 10000);
+</script>
+</body>
+</html>
