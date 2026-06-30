@@ -16,8 +16,10 @@ services:
     environment:
       - PORT=4000
       - ADGUARD_URL=http://192.168.1.49:3000
-      - ADGUARD_USER=admin
+      - ADGUARD_USER=${ADGUARD_USER:-tymastrangelo}
       - ADGUARD_PASS=${ADGUARD_PASS:-}
+      - KUMA_URL=http://192.168.1.49:3001
+      - NETALERTX_URL=http://192.168.1.49:20211
     network_mode: host
     pid: host
 
@@ -31,3 +33,19 @@ services:
     network_mode: host
     depends_on:
       - jarvis-backend
+
+  jarvis-webhook:
+    image: node:20-alpine
+    container_name: jarvis-webhook
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./webhook:/app
+      - /opt/stacks/jarvis:/opt/stacks/jarvis
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sh -c "apk add --no-cache docker-cli docker-cli-compose git && node listener.js"
+    environment:
+      - WEBHOOK_PORT=9000
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      - REPO_PATH=/opt/stacks/jarvis
+    network_mode: host

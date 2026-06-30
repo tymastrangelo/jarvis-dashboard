@@ -77,7 +77,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .docker-table td:first-child{color:#38bdf8}
 
 /* ADGUARD */
-.ag-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.ag-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
 .ag-card{padding:8px 10px;border:1px solid rgba(14,165,233,0.12);background:rgba(14,165,233,0.025)}
 .ag-val{font-family:'Share Tech Mono',monospace;font-size:19px;color:#38bdf8}
 .ag-label{font-size:9px;color:#7dd3fc;letter-spacing:1px;text-transform:uppercase;margin-top:1px;opacity:.6}
@@ -269,6 +269,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="ag-card"><div class="ag-val" id="ag-blocked">--</div><div class="ag-label">Blocked</div></div>
       <div class="ag-card"><div class="ag-val" id="ag-pct">--%</div><div class="ag-label">Block Rate</div></div>
       <div class="ag-card"><div class="ag-val" id="ag-latency">--ms</div><div class="ag-label">Avg Latency</div></div>
+      <div class="ag-card"><div class="ag-val" id="ag-malware">--</div><div class="ag-label">Malware Blocked</div></div>
+      <div class="ag-card"><div class="ag-val" id="ag-adult">--</div><div class="ag-label">Adult Blocked</div></div>
     </div>
     <div class="panel-label" style="margin-top:10px;margin-bottom:6px">Top Blocked Domains</div>
     <div class="top-list" id="ag-top-blocked"><div class="loading">loading...</div></div>
@@ -320,6 +322,22 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="sysinfo-row"><span class="si-key">Local IP</span><span class="si-val">192.168.1.49</span></div>
       <div class="sysinfo-row"><span class="si-key">Tailscale IP</span><span class="si-val">100.69.206.67</span></div>
     </div>
+  </div>
+  <!-- UPTIME KUMA -->
+  <div class="panel col2">
+    <div class="panel-label">Uptime Kuma · Site Monitoring</div>
+    <div class="ag-grid" style="grid-template-columns:1fr 1fr">
+      <div class="ag-card"><div class="ag-val" id="kuma-up" style="color:#22c55e">--</div><div class="ag-label">Sites Up</div></div>
+      <div class="ag-card"><div class="ag-val" id="kuma-down" style="color:#ef4444">--</div><div class="ag-label">Sites Down</div></div>
+    </div>
+    <div id="kuma-detail" style="margin-top:6px"><div class="loading">loading...</div></div>
+  </div>
+
+  <!-- NETALERTX -->
+  <div class="panel col1">
+    <div class="panel-label">NetAlertX</div>
+    <div class="big-num" id="netalertx-count" style="font-size:32px">--</div>
+    <div class="big-sub">devices tracked</div>
   </div>
 
 </div>
@@ -486,6 +504,8 @@ function render(data) {
     set('ag-blocked', fmtNum(ag.blocked));
     set('ag-pct', ag.blocked_pct + '%');
     set('ag-latency', ag.avg_latency_ms + 'ms');
+    set('ag-malware', fmtNum(ag.blocked_malware || 0));
+    set('ag-adult', fmtNum(ag.blocked_adult || 0));
     set('ag-version', ag.version ? 'v' + ag.version : 'online');
 
     const topBlocked = document.getElementById('ag-top-blocked');
@@ -510,7 +530,7 @@ function render(data) {
       topClients.innerHTML = '<div class="error-text">no data</div>';
     }
   } else {
-    ['ag-queries','ag-blocked','ag-pct','ag-latency'].forEach(id => set(id, 'N/A'));
+    ['ag-queries','ag-blocked','ag-pct','ag-latency','ag-malware','ag-adult'].forEach(id => set(id, 'N/A'));
     document.getElementById('ag-top-blocked').innerHTML = '<div class="error-text">adguard unavailable</div>';
     document.getElementById('ag-top-clients').innerHTML = '<div class="error-text">adguard unavailable</div>';
   }
@@ -531,6 +551,33 @@ function render(data) {
   } else {
     tsEl.innerHTML = '<div class="error-text">tailscale unavailable</div>';
   }
+
+  // Uptime Kuma
+  const kuma = data.uptime_kuma;
+  if (kuma && kuma.available) {
+    set('kuma-up', kuma.up !== undefined ? kuma.up : '--');
+    set('kuma-down', kuma.down !== undefined ? kuma.down : '--');
+    const kumaDetail = document.getElementById('kuma-detail');
+    if (kuma.monitors && kuma.monitors.length) {
+      kumaDetail.innerHTML = kuma.monitors.map(m => `
+        <div class="ts-device">
+          <div class="dot ${m.up ? 'up' : 'down'}"></div>
+          <span class="ts-name">${m.id}</span>
+          <span class="ts-ip">${m.ping !== null ? m.ping + 'ms' : '--'}</span>
+        </div>
+      `).join('');
+    } else {
+      kumaDetail.innerHTML = '<div class="error-text">no monitor detail available</div>';
+    }
+  } else {
+    set('kuma-up', 'N/A');
+    set('kuma-down', 'N/A');
+    document.getElementById('kuma-detail').innerHTML = '<div class="error-text">uptime kuma unavailable</div>';
+  }
+
+  // NetAlertX
+  const nax = data.netalertx;
+  set('netalertx-count', nax && nax.available ? nax.count : 'N/A');
 
   // Last updated
   const t = new Date(data.timestamp);

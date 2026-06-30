@@ -3,8 +3,10 @@ const { exec } = require('child_process');
 const fs = require('fs');
 
 const ADGUARD_URL = process.env.ADGUARD_URL || 'http://localhost:3000';
-const ADGUARD_USER = process.env.ADGUARD_USER || 'admin';
+const ADGUARD_USER = process.env.ADGUARD_USER || 'tymastrangelo';
 const ADGUARD_PASS = process.env.ADGUARD_PASS || '';
+const KUMA_URL = process.env.KUMA_URL || 'http://localhost:3001';
+const NETALERTX_URL = process.env.NETALERTX_URL || 'http://localhost:20211';
 const PORT = process.env.PORT || 4000;
 
 function run(cmd) {
@@ -49,6 +51,47 @@ function fetchAdguard(path) {
     req.on('error', () => resolve(null));
     req.setTimeout(3000, () => { req.destroy(); resolve(null); });
   });
+}
+
+function fetchJson(fullUrl, headers) {
+  return new Promise((resolve) => {
+    const mod = fullUrl.startsWith('https:') ? require('https') : require('http');
+    const req = mod.get(fullUrl, { headers: headers || {} }, (res) => {
+      let data = '';
+      res.on('data', d => data += d);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { resolve(null); }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.setTimeout(3000, () => { req.destroy(); resolve(null); });
+  });
+}
+
+async function getUptimeKumaStatus() {
+  const data = await fetchJson(`${KUMA_URL}/api/status-page/heartbeat/default`);
+  if (data && data.heartbeatList) {
+    const monitors = Object.keys(data.heartbeatList);
+    let up = 0, down = 0;
+    const details = monitors.map(id => {
+      const beats = data.heartbeatList[id];
+      const latest = beats[beats.length - 1];
+      const isUp = latest && latest.status === 1;
+      if (isUp) up++; else down++;
+      return { id, up: isUp, ping: latest ? latest.ping : null };
+    });
+    return { up, down, total: monitors.length, monitors: details, available: true };
+  }
+  return { available: false };
+}
+
+async function getNetAlertXDevices() {
+  const data = await fetchJson(`${NETALERTX_URL}/php/server/devices.php?action=getDevices`);
+  if (Array.isArray(data)) {
+    return { count: data.length, available: true };
+  }
+  return { available: false, count: null };
 }
 
 async function getSystemStats() {
@@ -203,9 +246,13 @@ async function getAdguardStats() {
     blocked_pct: stats.num_dns_queries
       ? Math.round((stats.num_blocked_filtering / stats.num_dns_queries) * 100)
       : 0,
+    blocked_malware: stats.num_replaced_safebrowsing || 0,
+    blocked_adult: stats.num_replaced_parental || 0,
+    safe_search_enforced: stats.num_replaced_safesearch || 0,
     avg_latency_ms: stats.avg_processing_time ? Math.round(stats.avg_processing_time * 1000) : 0,
     top_blocked: (stats.top_blocked_domains || []).slice(0, 5),
     top_clients: (stats.top_clients || []).slice(0, 5),
+    top_queried: (stats.top_queried_domains || []).slice(0, 5),
     running: status ? status.running : false,
     version: status ? status.version : null,
   };
@@ -238,11 +285,13 @@ async function getDockerDetails() {
 }
 
 async function getStats() {
-  const [system, adguard, tailscale, dockerDetails] = await Promise.all([
+  const [system, adguard, tailscale, dockerDetails, uptimeKuma, netalertx] = await Promise.all([
     getSystemStats(),
     getAdguardStats(),
     getTailscaleStatus(),
     getDockerDetails(),
+    getUptimeKumaStatus(),
+    getNetAlertXDevices(),
   ]);
   return {
     timestamp: new Date().toISOString(),
@@ -250,6 +299,8 @@ async function getStats() {
     adguard,
     tailscale,
     docker_details: dockerDetails,
+    uptime_kuma: uptimeKuma,
+    netalertx,
   };
 }
 
